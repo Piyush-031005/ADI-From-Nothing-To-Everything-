@@ -5,49 +5,80 @@ import atmosphereVertex   from '../shaders/atmosphere/vertex.glsl';
 import atmosphereFragment from '../shaders/atmosphere/fragment.glsl';
 
 /**
- * Era 10 — THE FUTURE (Unknown Planet)
- * Purple oceans. Floating islands. Crystal structures.
- * Bioluminescent alien world. Two moons. Final message.
+ * Era 10 — THE FUTURE
+ * Cyber-Earth. Dyson sphere rings. Data streams. Cinematic Backdrop.
  */
 export class Era10_Future {
   constructor(experience) {
     this.exp     = experience;
     this.visible = false;
 
-    this._buildAlienPlanet();
-    this._buildFloatingIslands();
-    this._buildAlienStarfield();
-    this._buildTwoMoons();
-    this._buildAlienParticles();
+    this._buildCinematicBackground();
+    this._buildCyberPlanet();
+    this._buildTechRings();
+    this._buildDataStreams();
   }
 
-  _buildAlienPlanet() {
-    // Reuse planet shader but with alien color palette via uniforms
+  _buildCinematicBackground() {
+    const texLoader = new THREE.TextureLoader();
+    const tex = texLoader.load('/assets/future.png');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    
+    // Massive cinematic cylinder backdrop
+    const geo = new THREE.CylinderGeometry(40, 40, 30, 64, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.BackSide,
+      transparent: true,
+      opacity: 0,
+      depthWrite: false
+    });
+    
+    this.backdrop = new THREE.Mesh(geo, mat);
+    this.backdrop.position.set(0, 5, 0);
+    this.backdrop.visible = false;
+    this.exp.scene.add(this.backdrop);
+  }
+
+  _buildCyberPlanet() {
     this.planetUniforms = {
       uTime:         { value: 0 },
-      uCoolProgress: { value: 0.7 },  // partially cooled = alien mix
-      uOceanProgress:{ value: 0.8 },  // lots of ocean
+      uCoolProgress: { value: 1.0 }, 
+      uOceanProgress:{ value: 1.0 },
       uSunDirection: { value: new THREE.Vector3(0.5, 0.3, 1.0).normalize() },
+      tDiffuse:      { value: null },
+      tSpecular:     { value: null },
+      tNormal:       { value: null }
     };
 
     const geo = new THREE.SphereGeometry(2.5, 128, 128);
-    const mat = new THREE.RawShaderMaterial({
-      vertexShader:   planetVertex,
-      fragmentShader: planetFragment,
-      uniforms:       this.planetUniforms,
-      glslVersion:    THREE.GLSL3,
+    const mat = new THREE.MeshStandardMaterial({
+      color: 0x111111,
+      roughness: 0.2,
+      metalness: 1.0,
+      emissive: 0x00ffcc,
+      emissiveIntensity: 0.1,
+      wireframe: true,
+      transparent: true,
+      opacity: 0.0
     });
 
-    // Override colors to purple/teal
     this.planet = new THREE.Mesh(geo, mat);
     this.planet.visible = false;
     this.exp.scene.add(this.planet);
+    
+    // Solid core underneath wireframe
+    const coreGeo = new THREE.SphereGeometry(2.48, 64, 64);
+    const coreMat = new THREE.MeshBasicMaterial({ color: 0x050510 });
+    this.core = new THREE.Mesh(coreGeo, coreMat);
+    this.core.visible = false;
+    this.planet.add(this.core);
 
-    // Purple atmosphere
-    const atmoGeo = new THREE.SphereGeometry(2.75, 64, 64);
+    // Glowing atmosphere
+    const atmoGeo = new THREE.SphereGeometry(2.7, 64, 64);
     this.atmoUniforms = {
       uSunDirection:       { value: this.planetUniforms.uSunDirection.value },
-      uAtmosphereColor:    { value: new THREE.Color('#a855f7') },
+      uAtmosphereColor:    { value: new THREE.Color('#00ffcc') },
       uAtmosphereStrength: { value: 0.0 },
     };
     const atmoMat = new THREE.RawShaderMaterial({
@@ -65,116 +96,54 @@ export class Era10_Future {
     this.exp.scene.add(this.atmosphere);
   }
 
-  _buildFloatingIslands() {
-    this.islands = new THREE.Group();
-
-    for (let i = 0; i < 8; i++) {
-      // Each island: flattened sphere with crystals on top
-      const islandGeo = new THREE.SphereGeometry(0.3 + Math.random() * 0.4, 8, 8);
-      const islandMat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color().setHSL(0.75 + Math.random() * 0.2, 0.5, 0.2),
-        transparent: true,
-        opacity: 0,
-      });
-      const island = new THREE.Mesh(islandGeo, islandMat);
-      island.scale.y = 0.3;
-
-      // Crystal cluster on top
-      for (let j = 0; j < 4; j++) {
-        const crystalGeo = new THREE.ConeGeometry(0.04, 0.3 + Math.random() * 0.3, 5);
-        const crystalMat = new THREE.MeshBasicMaterial({
-          color: new THREE.Color().setHSL(0.78 + Math.random() * 0.1, 1, 0.6),
-          transparent: true,
-          opacity: 0,
-          blending: THREE.AdditiveBlending,
-          depthWrite: false,
-        });
-        const crystal = new THREE.Mesh(crystalGeo, crystalMat);
-        const a = (j / 4) * Math.PI * 2;
-        crystal.position.set(Math.cos(a) * 0.15, 0.2, Math.sin(a) * 0.15);
-        island.add(crystal);
-      }
-
-      // Position: floating around the planet at medium distance
-      const angle = (i / 8) * Math.PI * 2;
-      const dist  = 3.5 + Math.random() * 2;
-      island.position.set(
-        Math.cos(angle) * dist,
-        (Math.random() - 0.5) * 3,
-        Math.sin(angle) * dist
-      );
-      island.userData.floatOffset = Math.random() * Math.PI * 2;
-      island.userData.floatSpeed  = 0.3 + Math.random() * 0.4;
-
-      this.islands.add(island);
-    }
-    this.islands.visible = false;
-    this.exp.scene.add(this.islands);
-  }
-
-  _buildTwoMoons() {
-    this.moons = [];
-    const moonColors = [0xd8b4fe, 0x7dd3fc];
-    const sizes = [0.4, 0.25];
-    const distances = [6, 8];
-
-    for (let i = 0; i < 2; i++) {
-      const geo = new THREE.SphereGeometry(sizes[i], 16, 16);
+  _buildTechRings() {
+    this.rings = new THREE.Group();
+    
+    // Dyson Sphere / Orbital Rings
+    for(let i=0; i<3; i++) {
+      const geo = new THREE.TorusGeometry(3.5 + i * 0.8, 0.02, 16, 100);
       const mat = new THREE.MeshBasicMaterial({
-        color: moonColors[i],
+        color: 0x00ffff,
         transparent: true,
         opacity: 0,
+        blending: THREE.AdditiveBlending
       });
-      const moon = new THREE.Mesh(geo, mat);
-      this.exp.scene.add(moon);
-      this.moons.push({ mesh: moon, distance: distances[i], speed: 0.08 - i * 0.03, angle: i * Math.PI });
+      const ring = new THREE.Mesh(geo, mat);
+      ring.rotation.x = Math.random() * Math.PI;
+      ring.rotation.y = Math.random() * Math.PI;
+      ring.userData = {
+        rx: (Math.random() - 0.5) * 0.05,
+        ry: (Math.random() - 0.5) * 0.05
+      };
+      
+      // Add data nodes to rings
+      for(let j=0; j<8; j++) {
+        const nodeGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
+        const nodeMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
+        const node = new THREE.Mesh(nodeGeo, nodeMat);
+        const angle = (j/8) * Math.PI * 2;
+        node.position.set(Math.cos(angle) * (3.5 + i*0.8), Math.sin(angle) * (3.5 + i*0.8), 0);
+        ring.add(node);
+      }
+      this.rings.add(ring);
     }
+    
+    this.rings.visible = false;
+    this.exp.scene.add(this.rings);
   }
 
-  _buildAlienStarfield() {
-    // Denser, more colorful alien sky
-    const count = 20000;
-    const pos   = new Float32Array(count * 3);
-    const col   = new Float32Array(count * 3);
+  _buildDataStreams() {
+    // Holographic data particles floating up
+    const count = 5000;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
 
     for (let i = 0; i < count; i++) {
-      const t = Math.random() * Math.PI * 2;
-      const p = Math.acos(2 * Math.random() - 1);
-      const r = 200 + Math.random() * 100;
-      pos[i*3]   = Math.sin(p) * Math.cos(t) * r;
-      pos[i*3+1] = Math.sin(p) * Math.sin(t) * r;
-      pos[i*3+2] = Math.cos(p) * r;
-
-      const c = new THREE.Color().setHSL(0.7 + Math.random() * 0.3, 0.8, 0.7);
-      col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color',    new THREE.Float32BufferAttribute(col, 3));
-
-    this.stars = new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.5,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0,
-      sizeAttenuation: true,
-    }));
-    this.stars.visible = false;
-    this.exp.scene.add(this.stars);
-  }
-
-  _buildAlienParticles() {
-    // Floating alien spores
-    const count = 15000;
-    const pos   = new Float32Array(count * 3);
-    const col   = new Float32Array(count * 3);
-
-    for (let i = 0; i < count; i++) {
-      pos[i*3]   = (Math.random() - 0.5) * 20;
+      pos[i*3]   = (Math.random() - 0.5) * 15;
       pos[i*3+1] = (Math.random() - 0.5) * 15;
-      pos[i*3+2] = (Math.random() - 0.5) * 20;
-      const c = new THREE.Color().setHSL(0.75 + Math.random() * 0.15, 1.0, 0.6);
+      pos[i*3+2] = (Math.random() - 0.5) * 15;
+      
+      const c = new THREE.Color().setHSL(0.5 + Math.random() * 0.2, 1.0, 0.6); // Cyan to purple
       col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
     }
 
@@ -182,16 +151,16 @@ export class Era10_Future {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('color',    new THREE.Float32BufferAttribute(col, 3));
 
-    this.spores = new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.06,
+    this.streams = new THREE.Points(geo, new THREE.PointsMaterial({
+      size: 0.04,
       vertexColors: true,
       transparent: true,
       opacity: 0,
       blending: THREE.AdditiveBlending,
       depthWrite: false,
     }));
-    this.spores.visible = false;
-    this.exp.scene.add(this.spores);
+    this.streams.visible = false;
+    this.exp.scene.add(this.streams);
   }
 
   getCameraPath() {
@@ -206,24 +175,23 @@ export class Era10_Future {
 
   show(duration = 1.5) {
     this.visible = true;
+    this.backdrop.visible = true;
     this.planet.visible = true;
+    this.core.visible = true;
     this.atmosphere.visible = true;
-    this.islands.visible = true;
-    this.stars.visible = true;
-    this.spores.visible = true;
-    this.moons.forEach(m => m.mesh.visible = true);
+    this.rings.visible = true;
+    this.streams.visible = true;
 
     const start = performance.now();
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
-      this.stars.material.opacity = t * 0.9;
-      this.spores.material.opacity = t * 0.6;
+      this.backdrop.material.opacity = t * 1.0;
+      this.streams.material.opacity = t * 0.8;
+      this.planet.material.opacity = t * 0.5;
       this.atmoUniforms.uAtmosphereStrength.value = t * 1.5;
-      this.islands.children.forEach(island => {
-        island.material.opacity = t * 0.85;
-        island.children.forEach(c => c.material.opacity = t);
+      this.rings.children.forEach(r => {
+        r.material.opacity = t * 0.5;
       });
-      this.moons.forEach(m => m.mesh.material.opacity = t * 0.9);
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -235,50 +203,50 @@ export class Era10_Future {
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
       const f = 1 - t;
-      this.stars.material.opacity = 0.9 * f;
-      this.spores.material.opacity = 0.6 * f;
+      this.backdrop.material.opacity = 1.0 * f;
+      this.streams.material.opacity = 0.8 * f;
+      this.planet.material.opacity = 0.5 * f;
       this.atmoUniforms.uAtmosphereStrength.value = 1.5 * f;
+      this.rings.children.forEach(r => r.material.opacity = 0.5 * f);
+      
       if (t < 1) requestAnimationFrame(tick);
       else {
+        this.backdrop.visible = false;
         this.planet.visible = false;
+        this.core.visible = false;
         this.atmosphere.visible = false;
-        this.islands.visible = false;
-        this.stars.visible = false;
-        this.spores.visible = false;
-        this.moons.forEach(m => m.mesh.visible = false);
+        this.rings.visible = false;
+        this.streams.visible = false;
       }
     };
     requestAnimationFrame(tick);
   }
 
   onScrollT(t) {
+    this.backdrop.rotation.y = t * 0.3;
     this.atmoUniforms.uAtmosphereStrength.value = 1.2 + t * 0.5;
+    this.planet.material.emissiveIntensity = 0.1 + t * 0.5;
   }
 
   update(time) {
     if (!this.visible) return;
-    this.planetUniforms.uTime.value = time;
-    this.planet.rotation.y = time * 0.02;
-    this.atmosphere.rotation.y = time * 0.02;
-    this.spores.rotation.y = time * 0.03;
-    this.stars.rotation.y = time * 0.002;
+    this.planet.rotation.y = time * 0.05;
+    this.atmosphere.rotation.y = time * 0.05;
+    
+    // Matrix data streams flowing upwards
+    const positions = this.streams.geometry.attributes.position.array;
+    for(let i=0; i<positions.length; i+=3) {
+      positions[i+1] += 0.05;
+      if(positions[i+1] > 15) {
+        positions[i+1] = -15;
+      }
+    }
+    this.streams.geometry.attributes.position.needsUpdate = true;
 
-    // Float islands
-    this.islands.children.forEach((island, i) => {
-      const off = island.userData.floatOffset;
-      const spd = island.userData.floatSpeed;
-      island.position.y += Math.sin(time * spd + off) * 0.003;
-      island.rotation.y = time * 0.1 + off;
-    });
-
-    // Orbit moons
-    this.moons.forEach(m => {
-      m.angle += m.speed * 0.01;
-      m.mesh.position.set(
-        Math.cos(m.angle) * m.distance,
-        Math.sin(m.angle * 0.3) * 1.5,
-        Math.sin(m.angle) * m.distance
-      );
+    // Orbit tech rings
+    this.rings.children.forEach(ring => {
+      ring.rotation.x += ring.userData.rx;
+      ring.rotation.y += ring.userData.ry;
     });
   }
 }
