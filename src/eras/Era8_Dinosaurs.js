@@ -2,100 +2,37 @@ import * as THREE from 'three';
 
 /**
  * Era 8 — DINOSAURS
- * Procedural terrain. Dino silhouettes. Meteor. Impact. Darkness.
+ * Cinematic prehistoric backdrop. Meteor impact. Darkness.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
     this.exp     = experience;
     this.visible = false;
 
-    this._buildTerrain();
-    this._buildDinos();
+    this._buildCinematicBackground();
     this._buildMeteor();
-    this._buildSky();
     this._impactTriggered = false;
   }
 
-  _buildTerrain() {
-    const geo = new THREE.PlaneGeometry(80, 80, 64, 64);
-    const pos = geo.attributes.position.array;
-
-    // Simple height-map via sine layers
-    for (let i = 0; i < pos.length; i += 3) {
-      const x = pos[i];
-      const z = pos[i+2];
-      pos[i+1] = Math.sin(x * 0.15) * Math.cos(z * 0.12) * 1.5
-               + Math.sin(x * 0.3 + 1.2) * 0.5
-               + Math.sin(z * 0.25) * 0.8;
-    }
-    geo.computeVertexNormals();
-
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x2d4a1e,
-      roughness: 1,
-      metalness: 0,
+  _buildCinematicBackground() {
+    const texLoader = new THREE.TextureLoader();
+    const tex = texLoader.load('/assets/dinosaur.png');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    
+    // Create a massive cinematic cylinder backdrop
+    const geo = new THREE.CylinderGeometry(40, 40, 30, 64, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.BackSide,
       transparent: true,
       opacity: 0,
+      depthWrite: false
     });
-    this.terrain = new THREE.Mesh(geo, mat);
-    this.terrain.rotation.x = -Math.PI * 0.5;
-    this.terrain.position.y = -2;
-    this.terrain.visible = false;
-    this.exp.scene.add(this.terrain);
-
-    // Ambient light for terrain
-    this.ambientLight = new THREE.AmbientLight(0x223300, 1.5);
-    this.exp.scene.add(this.ambientLight);
-
-    this.sunLight = new THREE.DirectionalLight(0xffe0a0, 2.0);
-    this.sunLight.position.set(10, 15, 5);
-    this.exp.scene.add(this.sunLight);
-  }
-
-  _buildDinos() {
-    this.dinos = new THREE.Group();
-
-    // Abstract dino silhouettes: body (ellipsoid) + neck + head
-    const dinoColor = 0x1a2e0a;
-    const makeBody = () => {
-      const g = new THREE.Group();
-
-      const body = new THREE.Mesh(
-        new THREE.SphereGeometry(0.6, 8, 8),
-        new THREE.MeshBasicMaterial({ color: dinoColor, transparent: true, opacity: 0 })
-      );
-      body.scale.set(1.5, 0.8, 1.0);
-      g.add(body);
-
-      const neck = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.12, 0.18, 1.2, 6),
-        new THREE.MeshBasicMaterial({ color: dinoColor, transparent: true, opacity: 0 })
-      );
-      neck.position.set(0.8, 0.6, 0);
-      neck.rotation.z = -0.4;
-      g.add(neck);
-
-      const head = new THREE.Mesh(
-        new THREE.SphereGeometry(0.22, 6, 6),
-        new THREE.MeshBasicMaterial({ color: dinoColor, transparent: true, opacity: 0 })
-      );
-      head.position.set(1.3, 1.2, 0);
-      g.add(head);
-
-      return g;
-    };
-
-    for (let i = 0; i < 6; i++) {
-      const dino = makeBody();
-      const angle = (i / 6) * Math.PI * 2;
-      dino.position.set(Math.cos(angle) * 8, -1, Math.sin(angle) * 8);
-      dino.scale.setScalar(0.8 + Math.random() * 1.2);
-      dino.rotation.y = -angle + Math.PI;
-      this.dinos.add(dino);
-    }
-
-    this.dinos.visible = false;
-    this.exp.scene.add(this.dinos);
+    
+    this.backdrop = new THREE.Mesh(geo, mat);
+    this.backdrop.position.set(0, 5, 0);
+    this.backdrop.visible = false;
+    this.exp.scene.add(this.backdrop);
   }
 
   _buildMeteor() {
@@ -143,20 +80,6 @@ export class Era8_Dinosaurs {
     this.exp.scene.add(this.impactFlash);
   }
 
-  _buildSky() {
-    // Simple sky sphere gradient
-    const geo = new THREE.SphereGeometry(100, 16, 16);
-    const mat = new THREE.MeshBasicMaterial({
-      color: 0x1a3a0a,
-      transparent: true,
-      opacity: 0,
-      side: THREE.BackSide,
-    });
-    this.sky = new THREE.Mesh(geo, mat);
-    this.sky.visible = false;
-    this.exp.scene.add(this.sky);
-  }
-
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 4, 18),
@@ -169,20 +92,13 @@ export class Era8_Dinosaurs {
 
   show(duration = 1.0) {
     this.visible = true;
-    this.terrain.visible = true;
-    this.dinos.visible   = true;
+    this.backdrop.visible = true;
     this.meteorGroup.visible = true;
-    this.sky.visible = true;
 
     const start = performance.now();
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
-      this.terrain.material.opacity = t * 0.95;
-      this.sky.material.opacity = t * 0.9;
-      // All dino parts
-      this.dinos.children.forEach(dino => {
-        dino.children.forEach(part => part.material.opacity = t * 0.9);
-      });
+      this.backdrop.material.opacity = t * 1.0;
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -194,17 +110,11 @@ export class Era8_Dinosaurs {
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
       const f = 1 - t;
-      this.terrain.material.opacity = 0.95 * f;
-      this.sky.material.opacity = 0.9 * f;
-      this.dinos.children.forEach(dino => {
-        dino.children.forEach(part => part.material.opacity = 0.9 * f);
-      });
+      this.backdrop.material.opacity = 1.0 * f;
       if (t < 1) requestAnimationFrame(tick);
       else {
-        this.terrain.visible = false;
-        this.dinos.visible = false;
+        this.backdrop.visible = false;
         this.meteorGroup.visible = false;
-        this.sky.visible = false;
         this.impactFlash.visible = false;
       }
     };
@@ -212,6 +122,8 @@ export class Era8_Dinosaurs {
   }
 
   onScrollT(t) {
+    this.backdrop.rotation.y = t * 0.3;
+
     // Meteor appears at t>0.5, impacts at t=0.85
     if (t > 0.5) {
       const meteorT = (t - 0.5) / 0.35;
@@ -235,7 +147,9 @@ export class Era8_Dinosaurs {
     // Darkness closes in post-impact
     if (t > 0.9) {
       const darkness = (t - 0.9) / 0.1;
-      this.sky.material.color.setRGB(darkness * 0.02, 0, 0);
+      this.backdrop.material.color.setRGB(1.0 - darkness, 1.0 - darkness, 1.0 - darkness);
+    } else {
+      this.backdrop.material.color.setHex(0xffffff);
     }
   }
 
@@ -257,9 +171,5 @@ export class Era8_Dinosaurs {
 
   update(time) {
     if (!this.visible) return;
-    // Dinos sway slightly
-    this.dinos.children.forEach((d, i) => {
-      d.position.y = -1 + Math.sin(time * 0.5 + i * 1.2) * 0.1;
-    });
   }
 }
