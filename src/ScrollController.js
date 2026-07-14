@@ -4,7 +4,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 
 gsap.registerPlugin(ScrollTrigger);
 
-const ERA_COUNT = 11; // 0-10
+const ERA_COUNT = 12; // 0-11
 
 /**
  * ScrollController — Maps scroll progress → era index + within-era t.
