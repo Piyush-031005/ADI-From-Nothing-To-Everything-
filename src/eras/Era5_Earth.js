@@ -24,9 +24,32 @@ export class Era5_Earth {
     this.planetUniforms = {
       uTime:         { value: 0 },
       uCoolProgress: { value: 1.0 },
-      uOceanProgress:{ value: 0.0 },   // grows with scroll
+      uOceanProgress:{ value: 0.0 },
       uSunDirection: { value: new THREE.Vector3(1, 0.3, 0.5).normalize() },
+      tDiffuse:      { value: null },
+      tSpecular:     { value: null },
+      tNormal:       { value: null }
     };
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin('anonymous');
+    
+    // Load high-res earth textures from reliable CDN
+    const baseUrl = 'https://unpkg.com/three-globe/example/img/';
+    
+    this.planetUniforms.uTextureLoaded = { value: 0.0 };
+
+    textureLoader.load(baseUrl + 'earth-blue-marble.jpg', (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      this.planetUniforms.tDiffuse.value = tex;
+      this.planetUniforms.uTextureLoaded.value = 1.0;
+    });
+    textureLoader.load(baseUrl + 'earth-water.png', (tex) => {
+      this.planetUniforms.tSpecular.value = tex;
+    });
+    textureLoader.load(baseUrl + 'earth-topology.png', (tex) => {
+      this.planetUniforms.tNormal.value = tex;
+    });
 
     const geo = new THREE.SphereGeometry(2, 128, 128);
     const mat = new THREE.RawShaderMaterial({
@@ -40,11 +63,11 @@ export class Era5_Earth {
     this.planet.visible = false;
     this.exp.scene.add(this.planet);
 
-    // Atmosphere (thicker than solar system era)
-    const atmoGeo = new THREE.SphereGeometry(2.22, 64, 64);
+    // Atmosphere (Rayleigh scattering style)
+    const atmoGeo = new THREE.SphereGeometry(2.1, 64, 64);
     this.atmoUniforms = {
       uSunDirection:       { value: this.planetUniforms.uSunDirection.value },
-      uAtmosphereColor:    { value: new THREE.Color('#60a5fa') },
+      uAtmosphereColor:    { value: new THREE.Color('#4ca6ff') },
       uAtmosphereStrength: { value: 0.0 },
     };
     const atmoMat = new THREE.RawShaderMaterial({

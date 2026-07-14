@@ -42,32 +42,50 @@ vec3 earthColor(float elev) {
   return mix(highland, snow, clamp((elev - 0.12) / 0.05, 0.0, 1.0));
 }
 
+uniform sampler2D tDiffuse;
+uniform sampler2D tSpecular;
+uniform sampler2D tNormal;
+uniform float uTextureLoaded;
+
 void main() {
   vec3 norm = normalize(vNormal);
 
+  // Sample Earth textures
+  vec3 texDiffuse = texture(tDiffuse, vUv).rgb;
+  float texSpecular = texture(tSpecular, vUv).r;
+  vec3 texNormal = texture(tNormal, vUv).xyz * 2.0 - 1.0;
+  
+  // Normal mapping based on texture (simplistic tangential)
+  vec3 tNorm = normalize(norm + texNormal * 0.5 * uTextureLoaded);
+
   // Diffuse lighting
-  float diff = max(dot(norm, normalize(uSunDirection)), 0.0);
+  float diff = max(dot(tNorm, normalize(uSunDirection)), 0.0);
   float ambient = 0.08;
 
   // Base color: lerp between lava and Earth
   vec3 lava = lavaColor(vHeat);
+  
+  // Mix procedural Earth with Texture Earth
   vec3 earth = earthColor(vElevation);
-
-  // Ocean mask
   float oceanMask = step(vElevation, 0.0) * uOceanProgress;
-  vec3 oceanCol = mix(vec3(0.04, 0.15, 0.35), vec3(0.05, 0.3, 0.55),
-    sin(uTime * 0.5 + vUv.x * 20.0) * 0.5 + 0.5);
+  vec3 oceanCol = mix(vec3(0.04, 0.15, 0.35), vec3(0.05, 0.3, 0.55), sin(uTime * 0.5 + vUv.x * 20.0) * 0.5 + 0.5);
+  vec3 proceduralEarth = mix(earth, oceanCol, oceanMask * 0.8);
 
-  earth = mix(earth, oceanCol, oceanMask * 0.8);
+  // We blend between procedural (early Earth) and textured (modern Earth) ONLY if texture is loaded
+  vec3 finalEarth = mix(proceduralEarth, texDiffuse, uOceanProgress * uCoolProgress * uTextureLoaded);
 
-  vec3 baseColor = mix(lava, earth, uCoolProgress);
+  vec3 baseColor = mix(lava, finalEarth, uCoolProgress);
 
-  // Specular (only on ocean/lava)
+  // Specular
   vec3 viewDir = normalize(-vPosition);
   vec3 halfVec = normalize(normalize(uSunDirection) + viewDir);
-  float spec = pow(max(dot(norm, halfVec), 0.0), 32.0);
-  float specMask = mix(vHeat, oceanMask, uCoolProgress);
-  vec3 specColor = vec3(1.0, 0.9, 0.7) * spec * specMask * 0.4;
+  float spec = pow(max(dot(tNorm, halfVec), 0.0), 32.0);
+  
+  // Use texture specular for modern Earth, procedural for early
+  float procSpecMask = mix(vHeat, oceanMask, uCoolProgress);
+  float finalSpecMask = mix(procSpecMask, texSpecular, uOceanProgress * uCoolProgress * uTextureLoaded);
+  
+  vec3 specColor = vec3(1.0, 0.9, 0.7) * spec * finalSpecMask * 0.5;
 
   // Lava glow in cracks (low elevation = bright glow when molten)
   float lavaCrack = (1.0 - uCoolProgress) * vHeat * 0.5;
@@ -75,9 +93,17 @@ void main() {
 
   vec3 finalColor = baseColor * (diff + ambient) + specColor + glowColor;
 
-  // Night side: faint lava glow visible even in shadow
-  float nightGlow = (1.0 - uCoolProgress) * (1.0 - diff) * vHeat * 0.15;
-  finalColor += vec3(1.0, 0.2, 0.0) * nightGlow;
+  // Night side city lights (only when fully cooled)
+  float nightSide = 1.0 - diff;
+  if (uOceanProgress > 0.9 && uCoolProgress > 0.9) {
+     float landMask = (1.0 - texSpecular) * uTextureLoaded;
+     float cityLights = pow(texDiffuse.g, 3.0) * landMask;
+     finalColor += vec3(1.0, 0.8, 0.4) * cityLights * nightSide * 2.0;
+  } else {
+     // Night side: faint lava glow visible even in shadow
+     float nightGlow = (1.0 - uCoolProgress) * nightSide * vHeat * 0.15;
+     finalColor += vec3(1.0, 0.2, 0.0) * nightGlow;
+  }
 
   pc_FragColor = vec4(finalColor, 1.0);
 }
