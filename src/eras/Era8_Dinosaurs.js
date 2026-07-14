@@ -15,6 +15,7 @@ export class Era8_Dinosaurs {
     this._buildTerrain();
     this._buildAtmosphere();
     this._buildMeteor();
+    this._buildDinosaur();
   }
 
   _buildTerrain() {
@@ -139,6 +140,60 @@ export class Era8_Dinosaurs {
     this.group.add(this.flash);
   }
 
+  _buildDinosaur() {
+    this.dino = new THREE.Group();
+    const mat = new THREE.MeshStandardMaterial({ color: 0x1a3300, roughness: 0.8, flatShading: true });
+    
+    // Body
+    const bodyGeo = new THREE.BoxGeometry(2, 2.5, 4);
+    const body = new THREE.Mesh(bodyGeo, mat);
+    body.position.set(0, 2, 0);
+    this.dino.add(body);
+
+    // Head
+    const headGeo = new THREE.BoxGeometry(1.5, 1.5, 2.5);
+    const head = new THREE.Mesh(headGeo, mat);
+    head.position.set(0, 3.5, 2.5);
+    this.dino.add(head);
+
+    // Tail
+    const tailGeo = new THREE.BoxGeometry(1, 1, 4);
+    const tail = new THREE.Mesh(tailGeo, mat);
+    tail.position.set(0, 1.5, -3.5);
+    tail.rotation.x = -Math.PI / 8;
+    this.dino.add(tail);
+
+    // Legs
+    const legGeo = new THREE.BoxGeometry(0.8, 2, 0.8);
+    const legL = new THREE.Mesh(legGeo, mat);
+    legL.position.set(1.2, 0.5, 0);
+    this.dino.add(legL);
+    const legR = new THREE.Mesh(legGeo, mat);
+    legR.position.set(-1.2, 0.5, 0);
+    this.dino.add(legR);
+
+    // Arms
+    const armGeo = new THREE.BoxGeometry(0.4, 1, 0.4);
+    const armL = new THREE.Mesh(armGeo, mat);
+    armL.position.set(1.2, 2.5, 1.5);
+    armL.rotation.x = Math.PI / 4;
+    this.dino.add(armL);
+    const armR = new THREE.Mesh(armGeo, mat);
+    armR.position.set(-1.2, 2.5, 1.5);
+    armR.rotation.x = Math.PI / 4;
+    this.dino.add(armR);
+
+    // Light for the dino
+    const light = new THREE.PointLight(0xffaa00, 1, 10);
+    light.position.set(0, 5, 5);
+    this.dino.add(light);
+
+    this.dino.position.set(-2, -5, 5);
+    this.dino.rotation.y = Math.PI / 6;
+    this.dino.scale.setScalar(0.5);
+    this.group.add(this.dino);
+  }
+
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
       new THREE.Vector3(0, 5, 20),
@@ -198,29 +253,34 @@ export class Era8_Dinosaurs {
     // Darkness closes in post-impact
     if (t > 0.9) {
       const darkness = (t - 0.9) / 0.1;
-      this.backdrop.material.color.setRGB(1.0 - darkness, 1.0 - darkness, 1.0 - darkness);
+      this.atmosphere.material.color.setRGB(0.13 - darkness*0.13, 0.02 - darkness*0.02, 0.0);
     } else {
-      this.backdrop.material.color.setHex(0xffffff);
+      this.atmosphere.material.color.setHex(0x220500);
     }
   }
 
   _triggerImpact() {
-    this.impactFlash.visible = true;
-    const mat = this.impactFlash.material;
+    this.flash.visible = true;
+    const mat = this.flash.material;
     mat.opacity = 1;
     const start = performance.now();
     const dur = 1500;
     const tick = () => {
       const t = Math.min((performance.now() - start) / dur, 1);
-      this.impactFlash.scale.setScalar(1 + t * 80);
+      this.flash.scale.setScalar(1 + t * 80);
       mat.opacity = 1 - t;
       if (t < 1) requestAnimationFrame(tick);
-      else this.impactFlash.visible = false;
+      else this.flash.visible = false;
     };
     requestAnimationFrame(tick);
   }
 
   update(time) {
     if (!this.visible) return;
+    if (this.dino) {
+      // Idle animation for T-Rex
+      this.dino.rotation.y = Math.sin(time * 0.5) * 0.1;
+      this.dino.position.y = -5 + Math.abs(Math.sin(time * 2.0)) * 0.2;
+    }
   }
 }
