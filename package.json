@@ -1,0 +1,19 @@
+{
+  "name": "adi",
+  "version": "1.0.0",
+  "description": "ĀDI — From Nothing. To Everything.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "gsap": "^3.12.5",
+    "howler": "^2.2.4",
+    "three": "^0.165.0"
+  },
+  "devDependencies": {
+    "vite": "^5.3.1",
+    "vite-plugin-glsl": "^1.3.1"
+  }
+}
