@@ -2,125 +2,37 @@ import * as THREE from 'three';
 
 /**
  * Era 9 — HUMANS
- * Time-lapse city lights (top-down). Fire→villages→cities→rockets→AI.
- * All done with particles + line segments — no textures needed.
+ * Cinematic backdrop. Fire to Metropolis evolution. Neural Net.
  */
 export class Era9_Humans {
   constructor(experience) {
     this.exp     = experience;
     this.visible = false;
 
-    this._buildEarth();
-    this._buildCityLights();
-    this._buildRockets();
+    this._buildCinematicBackground();
     this._buildSatelliteGrid();
     this._buildNeuralNet();
   }
 
-  _buildEarth() {
-    // Dark Earth sphere (night side view)
-    const geo = new THREE.SphereGeometry(3, 64, 64);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x050a05,
-      roughness: 1,
-      metalness: 0,
+  _buildCinematicBackground() {
+    const texLoader = new THREE.TextureLoader();
+    const tex = texLoader.load('/assets/humans.png');
+    tex.colorSpace = THREE.SRGBColorSpace;
+    
+    // Massive cinematic cylinder backdrop
+    const geo = new THREE.CylinderGeometry(40, 40, 30, 64, 1, true);
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex,
+      side: THREE.BackSide,
       transparent: true,
       opacity: 0,
+      depthWrite: false
     });
-    this.earthDark = new THREE.Mesh(geo, mat);
-    this.earthDark.visible = false;
-    this.exp.scene.add(this.earthDark);
-
-    const ambientLight = new THREE.AmbientLight(0x111122, 0.5);
-    this.exp.scene.add(ambientLight);
-  }
-
-  _buildCityLights() {
-    // Distributed light points on sphere surface
-    const count = 25000;
-    const pos   = new Float32Array(count * 3);
-    const col   = new Float32Array(count * 3);
-    const sizes = new Float32Array(count);
-
-    const lightColors = [
-      new THREE.Color('#ffd700'),
-      new THREE.Color('#ffffff'),
-      new THREE.Color('#ffaa44'),
-      new THREE.Color('#aad4ff'),
-      new THREE.Color('#ff6644'),
-    ];
-
-    for (let i = 0; i < count; i++) {
-      // Project onto sphere surface
-      const theta = Math.random() * Math.PI * 2;
-      const phi   = Math.acos(2 * Math.random() - 1);
-      const r     = 3.02 + Math.random() * 0.02;
-
-      pos[i*3]   = Math.sin(phi) * Math.cos(theta) * r;
-      pos[i*3+1] = Math.sin(phi) * Math.sin(theta) * r;
-      pos[i*3+2] = Math.cos(phi) * r;
-
-      const c = lightColors[Math.floor(Math.random() * lightColors.length)];
-      // Denser near equator for more city-like look
-      const density = Math.pow(1 - Math.abs(Math.cos(phi)), 0.7);
-      col[i*3]   = c.r * density;
-      col[i*3+1] = c.g * density;
-      col[i*3+2] = c.b * density;
-      sizes[i] = Math.random() * density;
-    }
-
-    const geo = new THREE.BufferGeometry();
-    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color',    new THREE.Float32BufferAttribute(col, 3));
-
-    const mat = new THREE.PointsMaterial({
-      size: 0.04,
-      vertexColors: true,
-      transparent: true,
-      opacity: 0,
-      blending: THREE.AdditiveBlending,
-      depthWrite: false,
-      sizeAttenuation: true,
-    });
-
-    this.cityLights = new THREE.Points(geo, mat);
-    this.cityLights.visible = false;
-    this.exp.scene.add(this.cityLights);
-
-    // Glow copy for bloom
-    const glowMat = mat.clone();
-    glowMat.size = 0.12;
-    glowMat.opacity = 0;
-    this.cityGlow = new THREE.Points(geo, glowMat);
-    this.exp.glowScene.add(this.cityGlow);
-  }
-
-  _buildRockets() {
-    this.rockets = [];
-    for (let i = 0; i < 5; i++) {
-      const theta = Math.random() * Math.PI * 2;
-      const phi   = Math.acos(2 * Math.random() - 1);
-      const origin = new THREE.Vector3(
-        Math.sin(phi) * Math.cos(theta) * 3,
-        Math.sin(phi) * Math.sin(theta) * 3,
-        Math.cos(phi) * 3
-      );
-      const dest = origin.clone().normalize().multiplyScalar(12);
-
-      // Trail line
-      const points = [origin.clone(), origin.clone()];
-      const geo    = new THREE.BufferGeometry().setFromPoints(points);
-      const mat    = new THREE.LineBasicMaterial({
-        color: 0xffd700,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending,
-      });
-      const line = new THREE.Line(geo, mat);
-      this.exp.scene.add(line);
-
-      this.rockets.push({ origin, dest, progress: Math.random(), line, geo, points });
-    }
+    
+    this.backdrop = new THREE.Mesh(geo, mat);
+    this.backdrop.position.set(0, 5, 0);
+    this.backdrop.visible = false;
+    this.exp.scene.add(this.backdrop);
   }
 
   _buildSatelliteGrid() {
@@ -210,18 +122,14 @@ export class Era9_Humans {
 
   show(duration = 1.0) {
     this.visible = true;
-    this.earthDark.visible = true;
-    this.cityLights.visible = true;
+    this.backdrop.visible = true;
     this.satelliteRings.visible = true;
     this.neuralNet.visible = true;
-    this.rockets.forEach(r => r.line.visible = true);
 
     const start = performance.now();
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
-      this.earthDark.material.opacity = t * 0.95;
-      this.cityLights.material.opacity = t * 0.8;
-      this.cityGlow.material.opacity = t * 0.3;
+      this.backdrop.material.opacity = t * 1.0;
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
@@ -233,13 +141,10 @@ export class Era9_Humans {
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
       const f = 1 - t;
-      this.earthDark.material.opacity = 0.95 * f;
-      this.cityLights.material.opacity = 0.8 * f;
-      this.cityGlow.material.opacity = 0.3 * f;
+      this.backdrop.material.opacity = 1.0 * f;
       if (t < 1) requestAnimationFrame(tick);
       else {
-        this.earthDark.visible = false;
-        this.cityLights.visible = false;
+        this.backdrop.visible = false;
         this.satelliteRings.visible = false;
         this.neuralNet.visible = false;
       }
@@ -248,6 +153,8 @@ export class Era9_Humans {
   }
 
   onScrollT(t) {
+    this.backdrop.rotation.y = t * 0.3;
+
     // Satellite rings appear at t>0.4
     const ringT = Math.max(0, (t - 0.4) / 0.6);
     this.satelliteRings.children.forEach((r, i) => {
@@ -261,21 +168,7 @@ export class Era9_Humans {
 
   update(time) {
     if (!this.visible) return;
-    this.earthDark.rotation.y = time * 0.04;
-    this.cityLights.rotation.y = time * 0.04;
-    this.cityGlow.rotation.y = time * 0.04;
     this.satelliteRings.rotation.y = time * 0.1;
-
-    // Animate rockets
-    this.rockets.forEach(r => {
-      r.progress = (r.progress + 0.003) % 1;
-      const p = r.progress;
-      const current = r.origin.clone().lerp(r.dest, p);
-      const trail   = r.origin.clone().lerp(r.dest, Math.max(0, p - 0.15));
-      r.geo.setFromPoints([trail, current]);
-      r.geo.attributes.position.needsUpdate = true;
-      r.line.material.opacity = Math.sin(p * Math.PI) * 0.9;
-    });
 
     // Neural net pulse
     this.neuralNet.rotation.y = time * 0.08;
