@@ -27,12 +27,39 @@ export class Camera {
     this.curveT    = 0;     // 0-1 progress along curve
     this.curveTargetT = 0;
 
-    // Mouse parallax
+    // Mouse parallax and manual orbit
     this._mouse = { x: 0, y: 0 };
+    this._orbitAngle = { x: 0, y: 0 };
+    this._isDragging = false;
+    this._lastMouse = { x: 0, y: 0 };
+
+    window.addEventListener('mousedown', e => {
+      this._isDragging = true;
+      this._lastMouse.x = e.clientX;
+      this._lastMouse.y = e.clientY;
+    });
+
     window.addEventListener('mousemove', (e) => {
+      // Parallax
       this._mouse.x = (e.clientX / window.innerWidth  - 0.5) * 2;
       this._mouse.y = (e.clientY / window.innerHeight - 0.5) * 2;
+
+      // Orbit drag
+      if (this._isDragging) {
+        const dx = e.clientX - this._lastMouse.x;
+        const dy = e.clientY - this._lastMouse.y;
+        this._orbitAngle.x -= dx * 0.005;
+        this._orbitAngle.y += dy * 0.005;
+        
+        // Clamp vertical orbit
+        this._orbitAngle.y = Math.max(-Math.PI/2.5, Math.min(Math.PI/2.5, this._orbitAngle.y));
+        
+        this._lastMouse.x = e.clientX;
+        this._lastMouse.y = e.clientY;
+      }
     });
+
+    window.addEventListener('mouseup', () => this._isDragging = false);
   }
 
   /**
@@ -52,34 +79,56 @@ export class Camera {
 
   update() {
     const delta = this.exp.time.delta;
-    const lerpSpeed = 1.0 - Math.pow(0.001, delta);   // ~5 frames
-
-    // Lerp curve t
-    this.curveT += (this.curveTargetT - this.curveT) * lerpSpeed;
+    
+    // Smooth curve progress
+    const curveLerp = 1.0 - Math.pow(0.05, delta);
+    this.curveT += (this.curveTargetT - this.curveT) * curveLerp;
 
     if (this.curve) {
-      // Sample position from camera curve
-      const pos = this.curve.getPoint(Math.min(this.curveT, 1.0));
-      this._target.copy(pos);
-
-      // Sample look-at
+      // Sample look-at first
       if (this.lookAtPath && this.lookAtPath.isLine3) {
         const la = this.lookAtPath.getPoint(Math.min(this.curveT, 1.0));
         this._lookAtTarget.copy(la);
       } else if (this.lookAtPath instanceof THREE.Vector3) {
         this._lookAtTarget.copy(this.lookAtPath);
       }
+
+      // Sample position from camera curve
+      const basePos = this.curve.getPoint(Math.min(this.curveT, 1.0));
+      
+      // Calculate distance and base direction from target
+      const radius = basePos.distanceTo(this._lookAtTarget);
+      
+      // Add manual orbit offset
+      const curveDir = basePos.clone().sub(this._lookAtTarget).normalize();
+      
+      // Apply user drag rotation
+      const euler = new THREE.Euler(this._orbitAngle.y, this._orbitAngle.x, 0, 'YXZ');
+      curveDir.applyEuler(euler);
+      
+      // Final target position
+      const finalPos = this._lookAtTarget.clone().add(curveDir.multiplyScalar(radius));
+      this._target.copy(finalPos);
     }
 
-    // Parallax
-    const parallax = 0.2;
-    this._target.x += this._mouse.x * parallax;
-    this._target.y -= this._mouse.y * parallax;
+    // Cinematic Parallax & Drone tilt
+    const parallaxX = this._mouse.x * 0.5;
+    const parallaxY = -this._mouse.y * 0.3;
+    
+    this._target.x += parallaxX;
+    this._target.y += parallaxY;
 
-    // Lerp position
-    this.instance.position.lerp(this._target, lerpSpeed * 0.6);
-    this._lookAt.lerp(this._lookAtTarget, lerpSpeed * 0.4);
+    // Smoother lerp for position and lookAt
+    const posLerp = 1.0 - Math.pow(0.005, delta);
+    const lookLerp = 1.0 - Math.pow(0.001, delta);
+
+    this.instance.position.lerp(this._target, posLerp);
+    this._lookAt.lerp(this._lookAtTarget, lookLerp);
     this.instance.lookAt(this._lookAt);
+
+    // Apply tilt (roll) based on mouse X for a spaceship/drone feel
+    const targetRoll = -this._mouse.x * 0.05;
+    this.instance.rotation.z += (targetRoll - this.instance.rotation.z) * posLerp;
   }
 
   /** Instant teleport (no lerp) */
