@@ -138,115 +138,100 @@ export class Era10_Future {
     const pos = new Float32Array(count * 3);
     const col = new Float32Array(count * 3);
 
-    for (let i = 0; i < count; i++) {
-      pos[i*3]   = (Math.random() - 0.5) * 15;
-      pos[i*3+1] = (Math.random() - 0.5) * 15;
-      pos[i*3+2] = (Math.random() - 0.5) * 15;
-      
-      const c = new THREE.Color().setHSL(0.5 + Math.random() * 0.2, 1.0, 0.6); // Cyan to purple
-      col[i*3] = c.r; col[i*3+1] = c.g; col[i*3+2] = c.b;
+    for(let i=0; i<count; i++) {
+      pos[i*3] = (Math.random() - 0.5) * 60;
+      pos[i*3+1] = -40 + Math.random() * 80;
+      pos[i*3+2] = (Math.random() - 0.5) * 60;
     }
-
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-    geo.setAttribute('color',    new THREE.Float32BufferAttribute(col, 3));
-
-    this.streams = new THREE.Points(geo, new THREE.PointsMaterial({
-      size: 0.04,
-      vertexColors: true,
+    
+    const mat = new THREE.ShaderMaterial({
+      uniforms: { time: { value: 0 }, opacity: { value: 0 } },
+      vertexShader: `
+        uniform float time;
+        void main() {
+          vec3 p = position;
+          p.y += time * 10.0;
+          p.y = mod(p.y + 40.0, 80.0) - 40.0;
+          vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
+          gl_PointSize = 1.0;
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float opacity;
+        void main() {
+          gl_FragColor = vec4(0.0, 1.0, 0.8, opacity * 0.3);
+        }
+      `,
       transparent: true,
-      opacity: 0,
       blending: THREE.AdditiveBlending,
-      depthWrite: false,
-    }));
-    this.streams.visible = false;
-    this.exp.scene.add(this.streams);
+      depthWrite: false
+    });
+    this.streams = new THREE.Points(geo, mat);
+    this.group.add(this.streams);
   }
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(10, 3, 10),
-      new THREE.Vector3(6,  2, 7),
-      new THREE.Vector3(4,  1, 5),
-      new THREE.Vector3(3,  0.5, 4),
+      new THREE.Vector3(0, 0, 60),
+      new THREE.Vector3(20, 10, 40),
+      new THREE.Vector3(0, 0, 25),
     ]);
     return { curve, lookAt: new THREE.Vector3(0, 0, 0) };
   }
 
-  show(duration = 1.5) {
+  show(duration = 1.0) {
     this.visible = true;
-    this.backdrop.visible = true;
-    this.planet.visible = true;
-    this.core.visible = true;
-    this.atmosphere.visible = true;
-    this.rings.visible = true;
-    this.streams.visible = true;
-
+    this.group.visible = true;
     const start = performance.now();
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
-      this.backdrop.material.opacity = t * 1.0;
-      this.streams.material.opacity = t * 0.8;
       this.planet.material.opacity = t * 0.5;
-      this.atmoUniforms.uAtmosphereStrength.value = t * 1.5;
-      this.rings.children.forEach(r => {
-        r.material.opacity = t * 0.5;
-      });
+      this.core.material.opacity = t * 0.9;
+      this.atmosphere.material.opacity = t * 0.3;
+      this.rings.children.forEach(r => r.material.opacity = t * 0.3);
+      this.streams.material.uniforms.opacity.value = t;
       if (t < 1) requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
   }
 
-  hide(duration = 0.8) {
+  hide(duration = 0.6) {
     this.visible = false;
     const start = performance.now();
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
       const f = 1 - t;
-      this.backdrop.material.opacity = 1.0 * f;
-      this.streams.material.opacity = 0.8 * f;
-      this.planet.material.opacity = 0.5 * f;
-      this.atmoUniforms.uAtmosphereStrength.value = 1.5 * f;
-      this.rings.children.forEach(r => r.material.opacity = 0.5 * f);
-      
+      this.planet.material.opacity = f * 0.5;
+      this.core.material.opacity = f * 0.9;
+      this.atmosphere.material.opacity = f * 0.3;
+      this.rings.children.forEach(r => r.material.opacity = f * 0.3);
+      this.streams.material.uniforms.opacity.value = f;
       if (t < 1) requestAnimationFrame(tick);
-      else {
-        this.backdrop.visible = false;
-        this.planet.visible = false;
-        this.core.visible = false;
-        this.atmosphere.visible = false;
-        this.rings.visible = false;
-        this.streams.visible = false;
-      }
+      else this.group.visible = false;
     };
     requestAnimationFrame(tick);
   }
 
   onScrollT(t) {
-    this.backdrop.rotation.y = t * 0.3;
-    this.atmoUniforms.uAtmosphereStrength.value = 1.2 + t * 0.5;
-    this.planet.material.emissiveIntensity = 0.1 + t * 0.5;
+    const scale = 1.0 + t * 0.5;
+    this.planet.scale.set(scale, scale, scale);
+    this.core.scale.set(scale, scale, scale);
+    this.atmosphere.scale.set(scale, scale, scale);
   }
 
   update(time) {
     if (!this.visible) return;
-    this.planet.rotation.y = time * 0.05;
-    this.atmosphere.rotation.y = time * 0.05;
+    this.planet.rotation.y = time * 0.2;
+    this.planet.rotation.z = time * 0.1;
     
-    // Matrix data streams flowing upwards
-    const positions = this.streams.geometry.attributes.position.array;
-    for(let i=0; i<positions.length; i+=3) {
-      positions[i+1] += 0.05;
-      if(positions[i+1] > 15) {
-        positions[i+1] = -15;
-      }
-    }
-    this.streams.geometry.attributes.position.needsUpdate = true;
+    this.rings.children[0].rotation.z = time * 0.5;
+    this.rings.children[1].rotation.x = Math.PI * 0.5 + Math.sin(time) * 0.1;
+    this.rings.children[1].rotation.z = -time * 0.3;
+    this.rings.children[2].rotation.z = time * 0.1;
 
-    // Orbit tech rings
-    this.rings.children.forEach(ring => {
-      ring.rotation.x += ring.userData.rx;
-      ring.rotation.y += ring.userData.ry;
-    });
+    this.streams.material.uniforms.time.value = time;
   }
 }
