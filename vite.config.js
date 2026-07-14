@@ -2,9 +2,14 @@ import { defineConfig } from 'vite'
 import glsl from 'vite-plugin-glsl'
 
 export default defineConfig({
-  plugins: [glsl()],
+  plugins: [
+    glsl({
+      include: ['**/*.glsl', '**/*.vert', '**/*.frag'],
+      compress: false,
+    })
+  ],
   server: {
     port: 5173,
-    open: true
+    open: true,
   }
 })

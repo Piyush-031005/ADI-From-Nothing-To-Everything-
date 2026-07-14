@@ -17,7 +17,7 @@ export class Renderer {
 
     this.instance = new THREE.WebGLRenderer({
       canvas: this.canvas,
-      antialias: false,   // We do our own AA via supersampling
+      antialias: false,
       alpha: false,
       powerPreference: 'high-performance',
     });
@@ -25,8 +25,9 @@ export class Renderer {
     this.instance.setSize(this.sizes.width, this.sizes.height);
     this.instance.setPixelRatio(this.sizes.pixelRatio);
     this.instance.outputColorSpace = THREE.SRGBColorSpace;
-    this.instance.toneMapping      = THREE.NoToneMapping; // done in shader
+    this.instance.toneMapping      = THREE.NoToneMapping;
     this.instance.autoClear        = false;
+    this.instance.setClearColor(0x000000, 1);
 
     this._createTargets();
     this._createComposite();
@@ -84,18 +85,19 @@ export class Renderer {
     this.compositeUniforms.uTime.value = time;
 
     // Pass 1: main scene → mainTarget
+    this.instance.setClearColor(0x000000, 1);
     this.instance.setRenderTarget(this.mainTarget);
-    this.instance.clear();
+    this.instance.clear(true, true, true);
     this.instance.render(exp.scene, exp.camera.instance);
 
     // Pass 2: glow scene → glowTarget
     this.instance.setRenderTarget(this.glowTarget);
-    this.instance.clear();
+    this.instance.clear(true, true, true);
     this.instance.render(exp.glowScene, exp.camera.instance);
 
     // Pass 3: composite → screen
     this.instance.setRenderTarget(null);
-    this.instance.clear();
+    this.instance.clear(true, true, true);
     this.instance.render(this.compositeScene, this.compositeCamera);
 
     // Overlay scene on top (UI particles, etc.)

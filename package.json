@@ -1,6 +1,7 @@
 {
   "name": "adi",
   "version": "1.0.0",
+  "type": "module",
   "description": "ĀDI — From Nothing. To Everything.",
   "scripts": {
     "dev": "vite",
