@@ -94,31 +94,81 @@ export class Era2_BigBang {
   }
 
   _buildNebulaGlow() {
-    // Background nebula cloud — large semi-transparent sprites
-    this.nebulas = new THREE.Group();
-    const colors = ['#ff6b35', '#fbbf24', '#7b8cde', '#f43f5e'];
+    this.particles = new THREE.Group();
 
-    for (let i = 0; i < 12; i++) {
-      const geo = new THREE.SphereGeometry(3 + Math.random() * 6, 8, 8);
-      const mat = new THREE.MeshBasicMaterial({
-        color: new THREE.Color(colors[Math.floor(Math.random() * colors.length)]),
-        transparent: true,
-        opacity: 0,
-        wireframe: false,
-        blending: THREE.AdditiveBlending,
-        depthWrite: false,
-        side: THREE.BackSide,
-      });
-      const mesh = new THREE.Mesh(geo, mat);
-      mesh.position.set(
-        (Math.random() - 0.5) * 20,
-        (Math.random() - 0.5) * 10,
-        (Math.random() - 0.5) * 20
-      );
-      this.nebulas.add(mesh);
+    // Blue/red sparkly aftermath of big bang
+    const count = 10000;
+    const pos = new Float32Array(count * 3);
+    const col = new Float32Array(count * 3);
+    const sizes = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      // Spherical distribution
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(Math.random() * 2 - 1);
+      const r = Math.pow(Math.random(), 0.3) * 30; // Dense center, sparse edges
+
+      pos[i*3]   = r * Math.sin(phi) * Math.cos(theta);
+      pos[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i*3+2] = r * Math.cos(phi);
+
+      // Blue to red transition
+      const color = new THREE.Color();
+      if (Math.random() > 0.5) {
+        color.setHSL(0.55 + Math.random() * 0.1, 1.0, 0.6); // Cyan/Blue
+      } else {
+        color.setHSL(0.95 + Math.random() * 0.1, 1.0, 0.5); // Red/Orange
+      }
+      col[i*3]   = color.r;
+      col[i*3+1] = color.g;
+      col[i*3+2] = color.b;
+      
+      sizes[i] = Math.random() * 0.5;
     }
-    this.nebulas.visible = false;
-    this.exp.scene.add(this.nebulas);
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+    // Custom shader for smooth particles
+    const mat = new THREE.ShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uOpacity: { value: 0 }
+      },
+      vertexShader: `
+        uniform float uTime;
+        attribute float size;
+        varying vec3 vColor;
+        void main() {
+          vColor = color;
+          vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+          gl_PointSize = size * (300.0 / -mvPosition.z);
+          gl_Position = projectionMatrix * mvPosition;
+        }
+      `,
+      fragmentShader: `
+        uniform float uOpacity;
+        varying vec3 vColor;
+        void main() {
+          float dist = length(gl_PointCoord - vec2(0.5));
+          if (dist > 0.5) discard;
+          float alpha = (0.5 - dist) * 2.0;
+          gl_FragColor = vec4(vColor, alpha * uOpacity);
+        }
+      `,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      vertexColors: true
+    });
+
+    this.plasma = new THREE.Points(geo, mat);
+    this.particles.add(this.plasma);
+    
+    this.particles.visible = false;
+    this.exp.scene.add(this.particles);
   }
 
   getCameraPath() {
@@ -135,9 +185,20 @@ export class Era2_BigBang {
     this.visible = true;
     this.explosion.visible = true;
     this.shockwave.visible = true;
-    this.nebulas.visible   = true;
-    // Animate shockwave expand
+    this.particles.visible = true;
+
+    // Animate shockwave
     this._triggerShockwave();
+
+    const start = performance.now();
+    const tick = () => {
+      const t = Math.min((performance.now() - start) / (duration * 1000), 1);
+      if (this.plasma) {
+        this.plasma.material.uniforms.uOpacity.value = t;
+      }
+      if (t < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
   }
 
   _triggerShockwave() {
@@ -157,19 +218,22 @@ export class Era2_BigBang {
     requestAnimationFrame(tick);
   }
 
-  hide(duration = 0.6) {
+  hide(duration = 0.8) {
     this.visible = false;
     const start = performance.now();
-    const startOpacity = this.nebulas.children[0]?.material.opacity || 0;
-    const exp = this.explosion;
     const tick = () => {
       const t = Math.min((performance.now() - start) / (duration * 1000), 1);
-      this.nebulas.children.forEach(m => m.material.opacity = startOpacity * (1 - t));
+      const f = 1 - t;
+      if (this.plasma) {
+        this.plasma.material.uniforms.uOpacity.value = f;
+      }
+      this.explosion.material.uniforms.uExplosionProgress.value = f;
+      
       if (t < 1) requestAnimationFrame(tick);
       else {
-        exp.visible = false;
+        this.explosion.visible = false;
         this.shockwave.visible = false;
-        this.nebulas.visible = false;
+        this.particles.visible = false;
       }
     };
     requestAnimationFrame(tick);
@@ -179,15 +243,24 @@ export class Era2_BigBang {
     this._explosionProgress = t;
     this.explosionUniforms.uExplosionProgress.value = t;
 
-    // Nebula fades in as explosion expands
-    const nebulaOpacity = Math.max(0, (t - 0.3) / 0.7) * 0.08;
-    this.nebulas.children.forEach(m => m.material.opacity = nebulaOpacity);
+    // Expand particles outwards based on scroll
+    if (this.particles) {
+      this.particles.scale.setScalar(1 + t * 10);
+      
+      // fade out as they expand too much
+      if (this.plasma) {
+         this.plasma.material.uniforms.uOpacity.value = this.visible ? (1.0 - t * 0.8) : 0;
+      }
+    }
   }
 
   update(time) {
     if (!this.visible) return;
     this.explosionUniforms.uTime.value = time;
-    // Slow nebula drift
-    this.nebulas.rotation.y = time * 0.01;
+    if (this.plasma) {
+      this.plasma.material.uniforms.uTime.value = time;
+      this.particles.rotation.y = time * 0.05;
+      this.particles.rotation.z = time * 0.02;
+    }
   }
 }
