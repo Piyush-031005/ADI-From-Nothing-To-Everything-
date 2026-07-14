@@ -2,7 +2,7 @@
  * ĀDI — From Nothing. To Everything.
  * Main entry point. Boots loader → waits for click → starts Experience.
  */
-
+import './style.css';
 import { Experience } from './Experience.js';
 import { Loader }     from './ui/Loader.js';
 

@@ -4,7 +4,7 @@ import glsl from 'vite-plugin-glsl'
 export default defineConfig({
   plugins: [
     glsl({
-      include: ['**/*.glsl', '**/*.vert', '**/*.frag'],
+      include: [/\.glsl$/, /\.vert$/, /\.frag$/],
       compress: false,
     })
   ],
