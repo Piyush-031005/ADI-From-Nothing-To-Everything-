@@ -3,6 +3,8 @@ precision highp float;
 
 uniform sampler2D uMainTexture;
 uniform sampler2D uGlowTexture;
+uniform sampler2D uDistortionTexture;
+uniform vec2 uBlackHolePosition;
 uniform float uTime;
 uniform float uChromaRadius;    // 0-1 chromatic aberration strength
 uniform float uGrainStrength;   // 0-1 film grain
@@ -42,11 +44,17 @@ float vignette(vec2 uv, float strength) {
 void main() {
   vec2 uv = vUv;
 
+  // Apply Black Hole Distortion
+  float distortionIntensity = texture(uDistortionTexture, uv).r;
+  vec2 towardCenter = uv - uBlackHolePosition;
+  towardCenter *= -distortionIntensity * 2.0;
+  vec2 distortedUv = uv + towardCenter;
+
   // Main scene with chromatic aberration
-  vec3 mainColor = chromaticAberration(uMainTexture, uv, uChromaRadius);
+  vec3 mainColor = chromaticAberration(uMainTexture, distortedUv, uChromaRadius);
 
   // Bloom glow (half-res blurred additive)
-  vec3 glowColor = texture(uGlowTexture, uv).rgb;
+  vec3 glowColor = texture(uGlowTexture, distortedUv).rgb;
   mainColor = mainColor + glowColor * uBloomStrength;
 
   // Subtle tone mapping (ACES approximation)
