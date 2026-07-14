@@ -31,7 +31,7 @@ html, body {
   z-index: 0;
 }
 #scroll-container::-webkit-scrollbar { display: none; }
-#scroll-spacer { height: 1100vh; width: 100%; }
+#scroll-spacer { height: 6000vh; width: 100%; }
 
 /* ── Canvas ───────────────────────────── */
 #canvas {
