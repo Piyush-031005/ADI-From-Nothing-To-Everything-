@@ -46,18 +46,28 @@ export class Renderer {
 
     this.mainTarget = new THREE.WebGLRenderTarget(w * 1.5, h * 1.5, opts);  // supersampled
     this.glowTarget = new THREE.WebGLRenderTarget(w * 0.5, h * 0.5, opts);  // half-res bloom
+    
+    // Low-res target for gravitational lensing distortion vector field
+    this.distortionTarget = new THREE.WebGLRenderTarget(w * 0.5, h * 0.5, {
+      magFilter: THREE.LinearFilter,
+      minFilter: THREE.LinearFilter,
+      format: THREE.RedFormat,
+      type: THREE.FloatType
+    });
   }
 
   _createComposite() {
     this.compositeUniforms = {
-      uMainTexture:  { value: this.mainTarget.texture },
-      uGlowTexture:  { value: this.glowTarget.texture },
-      uTime:         { value: 0 },
-      uChromaRadius: { value: 0.002 },
-      uGrainStrength:{ value: 0.012 },
-      uBloomStrength:{ value: 0.5 },
-      uVignette:     { value: 0.5 },
-      uFlashAlpha:   { value: 0.0 },
+      uMainTexture:       { value: this.mainTarget.texture },
+      uGlowTexture:       { value: this.glowTarget.texture },
+      uDistortionTexture: { value: this.distortionTarget.texture },
+      uBlackHolePosition: { value: new THREE.Vector2(0.5, 0.5) },
+      uTime:              { value: 0 },
+      uChromaRadius:      { value: 0.002 },
+      uGrainStrength:     { value: 0.012 },
+      uBloomStrength:     { value: 0.5 },
+      uVignette:          { value: 0.5 },
+      uFlashAlpha:        { value: 0.0 },
     };
 
     const mat = new THREE.RawShaderMaterial({
@@ -84,6 +94,11 @@ export class Renderer {
     const time = exp.time.elapsed;
     this.compositeUniforms.uTime.value = time;
 
+    // Optional Black Hole Position tracking for distortion
+    if (exp.blackHolePosition) {
+       this.compositeUniforms.uBlackHolePosition.value.copy(exp.blackHolePosition);
+    }
+
     // Pass 1: main scene → mainTarget
     this.instance.setClearColor(0x000000, 1);
     this.instance.setRenderTarget(this.mainTarget);
@@ -94,8 +109,14 @@ export class Renderer {
     this.instance.setRenderTarget(this.glowTarget);
     this.instance.clear(true, true, true);
     this.instance.render(exp.glowScene, exp.camera.instance);
+    
+    // Pass 3: distortion scene → distortionTarget
+    this.instance.setClearColor(0x000000, 1);
+    this.instance.setRenderTarget(this.distortionTarget);
+    this.instance.clear(true, true, true);
+    this.instance.render(exp.distortionScene, exp.camera.instance);
 
-    // Pass 3: composite → screen
+    // Pass 4: composite → screen
     this.instance.setRenderTarget(null);
     this.instance.clear(true, true, true);
     this.instance.render(this.compositeScene, this.compositeCamera);

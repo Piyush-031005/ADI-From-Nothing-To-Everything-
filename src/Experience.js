@@ -32,9 +32,12 @@ export class Experience {
   }
 
   setScenes() {
-    this.scene        = new THREE.Scene();
-    this.glowScene    = new THREE.Scene();
+    this.scene = new THREE.Scene();
+    this.scene.background = new THREE.Color(0x000000);
+    this.glowScene = new THREE.Scene();
+    this.glowScene.background = new THREE.Color(0x000000);
     this.overlayScene = new THREE.Scene();
+    this.distortionScene = new THREE.Scene(); // Used by Black Hole for gravitational lensing
   }
 
   setCamera() {
