@@ -1,143 +1,88 @@
 import * as THREE from 'three';
-import planetVertex   from '../shaders/planet/vertex.glsl';
-import planetFragment from '../shaders/planet/fragment.glsl';
-import atmosphereVertex   from '../shaders/atmosphere/vertex.glsl';
-import atmosphereFragment from '../shaders/atmosphere/fragment.glsl';
 
 /**
- * Era 10 — THE FUTURE
- * Cyber-Earth. Dyson sphere rings. Data streams. Cinematic Backdrop.
+ * Era 10 — FUTURE
+ * Procedural Holographic Cyber Planet & Dyson Sphere.
  */
 export class Era10_Future {
   constructor(experience) {
-    this.exp     = experience;
+    this.exp = experience;
     this.visible = false;
-
-    this._buildCinematicBackground();
+    this.group = new THREE.Group();
+    this.group.visible = false;
+    this.exp.scene.add(this.group);
+    
     this._buildCyberPlanet();
-    this._buildTechRings();
-    this._buildDataStreams();
-  }
-
-  _buildCinematicBackground() {
-    const texLoader = new THREE.TextureLoader();
-    const tex = texLoader.load('/assets/future.png');
-    tex.colorSpace = THREE.SRGBColorSpace;
-    
-    // Massive cinematic cylinder backdrop
-    const geo = new THREE.CylinderGeometry(40, 40, 30, 64, 1, true);
-    const mat = new THREE.MeshBasicMaterial({
-      map: tex,
-      side: THREE.BackSide,
-      transparent: true,
-      opacity: 0,
-      depthWrite: false
-    });
-    
-    this.backdrop = new THREE.Mesh(geo, mat);
-    this.backdrop.position.set(0, 5, 0);
-    this.backdrop.visible = false;
-    this.exp.scene.add(this.backdrop);
+    this._buildDysonRings();
+    this._buildMatrixStreams();
   }
 
   _buildCyberPlanet() {
-    this.planetUniforms = {
-      uTime:         { value: 0 },
-      uCoolProgress: { value: 1.0 }, 
-      uOceanProgress:{ value: 1.0 },
-      uSunDirection: { value: new THREE.Vector3(0.5, 0.3, 1.0).normalize() },
-      tDiffuse:      { value: null },
-      tSpecular:     { value: null },
-      tNormal:       { value: null }
-    };
-
-    const geo = new THREE.SphereGeometry(2.5, 128, 128);
-    const mat = new THREE.MeshStandardMaterial({
-      color: 0x111111,
-      roughness: 0.2,
-      metalness: 1.0,
-      emissive: 0x00ffcc,
-      emissiveIntensity: 0.1,
+    const geo = new THREE.IcosahedronGeometry(12, 3);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
       wireframe: true,
       transparent: true,
-      opacity: 0.0
+      opacity: 0,
+      blending: THREE.AdditiveBlending
     });
-
     this.planet = new THREE.Mesh(geo, mat);
-    this.planet.visible = false;
-    this.exp.scene.add(this.planet);
-    
-    // Solid core underneath wireframe
-    const coreGeo = new THREE.SphereGeometry(2.48, 64, 64);
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0x050510 });
-    this.core = new THREE.Mesh(coreGeo, coreMat);
-    this.core.visible = false;
-    this.planet.add(this.core);
+    this.group.add(this.planet);
 
-    // Glowing atmosphere
-    const atmoGeo = new THREE.SphereGeometry(2.7, 64, 64);
-    this.atmoUniforms = {
-      uSunDirection:       { value: this.planetUniforms.uSunDirection.value },
-      uAtmosphereColor:    { value: new THREE.Color('#00ffcc') },
-      uAtmosphereStrength: { value: 0.0 },
-    };
-    const atmoMat = new THREE.RawShaderMaterial({
-      vertexShader:   atmosphereVertex,
-      fragmentShader: atmosphereFragment,
-      uniforms:       this.atmoUniforms,
-      glslVersion:    THREE.GLSL3,
-      transparent:    true,
-      depthWrite:     false,
-      side:           THREE.FrontSide,
-      blending:       THREE.AdditiveBlending,
+    // Inner core
+    const coreGeo = new THREE.SphereGeometry(11.5, 32, 32);
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: 0x050011,
+      transparent: true,
+      opacity: 0
     });
-    this.atmosphere = new THREE.Mesh(atmoGeo, atmoMat);
-    this.atmosphere.visible = false;
-    this.exp.scene.add(this.atmosphere);
+    this.core = new THREE.Mesh(coreGeo, coreMat);
+    this.group.add(this.core);
+
+    // Atmosphere
+    const atmGeo = new THREE.SphereGeometry(13.5, 64, 64);
+    const atmMat = new THREE.MeshBasicMaterial({
+      color: 0x8800ff,
+      transparent: true,
+      blending: THREE.AdditiveBlending,
+      side: THREE.BackSide,
+      depthWrite: false,
+      opacity: 0
+    });
+    this.atmosphere = new THREE.Mesh(atmGeo, atmMat);
+    this.group.add(this.atmosphere);
   }
 
-  _buildTechRings() {
+  _buildDysonRings() {
     this.rings = new THREE.Group();
-    
-    // Dyson Sphere / Orbital Rings
-    for(let i=0; i<3; i++) {
-      const geo = new THREE.TorusGeometry(3.5 + i * 0.8, 0.02, 16, 100);
-      const mat = new THREE.MeshBasicMaterial({
-        color: 0x00ffff,
-        transparent: true,
-        opacity: 0,
-        blending: THREE.AdditiveBlending
-      });
-      const ring = new THREE.Mesh(geo, mat);
-      ring.rotation.x = Math.random() * Math.PI;
-      ring.rotation.y = Math.random() * Math.PI;
-      ring.userData = {
-        rx: (Math.random() - 0.5) * 0.05,
-        ry: (Math.random() - 0.5) * 0.05
-      };
-      
-      // Add data nodes to rings
-      for(let j=0; j<8; j++) {
-        const nodeGeo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
-        const nodeMat = new THREE.MeshBasicMaterial({ color: 0xff00ff });
-        const node = new THREE.Mesh(nodeGeo, nodeMat);
-        const angle = (j/8) * Math.PI * 2;
-        node.position.set(Math.cos(angle) * (3.5 + i*0.8), Math.sin(angle) * (3.5 + i*0.8), 0);
-        ring.add(node);
-      }
-      this.rings.add(ring);
-    }
-    
-    this.rings.visible = false;
-    this.exp.scene.add(this.rings);
+    const mat = new THREE.MeshBasicMaterial({
+      color: 0xff00ff,
+      wireframe: true,
+      transparent: true,
+      opacity: 0,
+      blending: THREE.AdditiveBlending
+    });
+
+    const r1 = new THREE.Mesh(new THREE.TorusGeometry(18, 0.2, 8, 64), mat);
+    r1.rotation.x = Math.PI * 0.5;
+    this.rings.add(r1);
+
+    const r2 = new THREE.Mesh(new THREE.TorusGeometry(22, 0.1, 8, 64), mat);
+    r2.rotation.y = Math.PI * 0.25;
+    r2.rotation.x = Math.PI * 0.5;
+    this.rings.add(r2);
+
+    const r3 = new THREE.Mesh(new THREE.TorusGeometry(26, 0.4, 3, 64), mat);
+    r3.rotation.y = -Math.PI * 0.25;
+    r3.rotation.x = Math.PI * 0.5;
+    this.rings.add(r3);
+
+    this.group.add(this.rings);
   }
 
-  _buildDataStreams() {
-    // Holographic data particles floating up
-    const count = 5000;
+  _buildMatrixStreams() {
+    const count = 10000;
     const pos = new Float32Array(count * 3);
-    const col = new Float32Array(count * 3);
-
     for(let i=0; i<count; i++) {
       pos[i*3] = (Math.random() - 0.5) * 60;
       pos[i*3+1] = -40 + Math.random() * 80;
@@ -150,19 +95,22 @@ export class Era10_Future {
       uniforms: { time: { value: 0 }, opacity: { value: 0 } },
       vertexShader: `
         uniform float time;
+        varying float vAlpha;
         void main() {
           vec3 p = position;
           p.y += time * 10.0;
           p.y = mod(p.y + 40.0, 80.0) - 40.0;
+          vAlpha = smoothstep(-40.0, -30.0, p.y) * smoothstep(40.0, 30.0, p.y);
           vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
-          gl_PointSize = 1.0;
+          gl_PointSize = (2.0 + sin(p.x * 10.0)) * (20.0 / -mvPosition.z);
           gl_Position = projectionMatrix * mvPosition;
         }
       `,
       fragmentShader: `
         uniform float opacity;
+        varying float vAlpha;
         void main() {
-          gl_FragColor = vec4(0.0, 1.0, 0.8, opacity * 0.3);
+          gl_FragColor = vec4(0.0, 1.0, 0.5, vAlpha * opacity * 0.5);
         }
       `,
       transparent: true,
@@ -175,9 +123,10 @@ export class Era10_Future {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, 60),
-      new THREE.Vector3(20, 10, 40),
-      new THREE.Vector3(0, 0, 25),
+      new THREE.Vector3(0, 5, 40),
+      new THREE.Vector3(-15, 10, 30),
+      new THREE.Vector3(-20, -5, 20),
+      new THREE.Vector3(0, 0, 15),
     ]);
     return { curve, lookAt: new THREE.Vector3(0, 0, 0) };
   }
@@ -216,6 +165,7 @@ export class Era10_Future {
   }
 
   onScrollT(t) {
+    // Zoom planet in
     const scale = 1.0 + t * 0.5;
     this.planet.scale.set(scale, scale, scale);
     this.core.scale.set(scale, scale, scale);
