@@ -184,13 +184,14 @@ export class Era8_Dinosaurs {
     this.dino.add(armR);
 
     // Light for the dino
-    const light = new THREE.PointLight(0xffaa00, 1, 10);
+    const light = new THREE.PointLight(0xffaa00, 2, 20);
     light.position.set(0, 5, 5);
     this.dino.add(light);
 
-    this.dino.position.set(-2, -5, 5);
-    this.dino.rotation.y = Math.PI / 6;
-    this.dino.scale.setScalar(0.5);
+    // Place it where the camera looks
+    this.dino.position.set(0, -1, -12);
+    this.dino.rotation.y = Math.PI / 4;
+    this.dino.scale.setScalar(1.5);
     this.group.add(this.dino);
   }
 
