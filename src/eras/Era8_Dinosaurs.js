@@ -2,7 +2,7 @@ import * as THREE from 'three';
 
 /**
  * Era 8 — DINOSAURS
- * Option B: Procedural Masterpiece (Massive Meteor Impact & Lava Terrain)
+ * Massive Meteor Impact & Stylized Geometric T-Rex Fossil Skull.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
@@ -13,6 +13,7 @@ export class Era8_Dinosaurs {
     this.exp.scene.add(this.group);
     
     this._buildTerrain();
+    this._buildFossilSkull();
     this._buildMeteor();
   }
 
@@ -23,7 +24,7 @@ export class Era8_Dinosaurs {
     this.terrainMat = new THREE.ShaderMaterial({
       uniforms: { 
         time: { value: 0 },
-        uImpact: { value: 0 } // 0 = peaceful, 1 = cracked with lava
+        uImpact: { value: 0 } 
       },
       vertexShader: `
         uniform float time;
@@ -31,7 +32,6 @@ export class Era8_Dinosaurs {
         varying vec2 vUv;
         varying float vHeight;
         
-        // Simplex noise (simplified)
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec3 permute(vec3 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -60,10 +60,8 @@ export class Era8_Dinosaurs {
         void main() {
           vUv = uv;
           vec3 pos = position;
-          // Rugged terrain
           float h = snoise(pos.xz * 0.05) * 6.0;
           
-          // Crater logic (deep depression in the center based on impact)
           float dist = length(pos.xz);
           float crater = smoothstep(40.0, 0.0, dist) * -15.0;
           float rim = smoothstep(60.0, 30.0, dist) * smoothstep(10.0, 30.0, dist) * 5.0;
@@ -80,26 +78,22 @@ export class Era8_Dinosaurs {
         varying vec2 vUv;
         varying float vHeight;
         
-        // Pseudo-random hash
         float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
 
         void main() {
-          vec3 rock = vec3(0.1, 0.15, 0.1); // Greenish pre-impact
+          vec3 rock = vec3(0.15, 0.2, 0.1); // Greenish pre-impact
           vec3 scorched = vec3(0.05, 0.05, 0.05); // Ash
           vec3 lava = vec3(1.0, 0.3, 0.0);
           
-          // Cracks and Lava
           float crackNoise = hash(floor(vUv * 50.0));
           float isCrack = step(0.95, crackNoise);
           
-          // Lava glow pulses and gets stronger deep in the crater
           float lavaGlow = smoothstep(-2.0, -10.0, vHeight) * isCrack;
           lavaGlow *= (0.8 + 0.2 * sin(time * 3.0 + vUv.x * 20.0));
           
           vec3 baseColor = mix(rock, scorched, uImpact);
           vec3 color = mix(baseColor, lava, lavaGlow * uImpact);
           
-          // Fog fade out
           float dist = gl_FragCoord.z / gl_FragCoord.w;
           float fog = smoothstep(40.0, 100.0, dist);
           color = mix(color, vec3(0.0), fog);
@@ -111,6 +105,70 @@ export class Era8_Dinosaurs {
     this.terrain = new THREE.Mesh(geo, this.terrainMat);
     this.terrain.position.y = -10;
     this.group.add(this.terrain);
+  }
+
+  _buildFossilSkull() {
+    this.skullGroup = new THREE.Group();
+    
+    // A highly stylized geometric T-Rex skull built from boxes
+    const mat = new THREE.MeshStandardMaterial({ 
+      color: 0xddccaa, 
+      roughness: 0.9,
+      metalness: 0.1
+    });
+
+    // Main cranium
+    const cranium = new THREE.Mesh(new THREE.BoxGeometry(4, 3, 5), mat);
+    cranium.position.set(0, 3, -2);
+    this.skullGroup.add(cranium);
+
+    // Snout
+    const snout = new THREE.Mesh(new THREE.BoxGeometry(2.5, 2, 6), mat);
+    snout.position.set(0, 2.5, 3.5);
+    this.skullGroup.add(snout);
+
+    // Brow ridges
+    const browL = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 3), mat);
+    browL.position.set(1.5, 4.5, 0);
+    browL.rotation.x = -0.2;
+    this.skullGroup.add(browL);
+
+    const browR = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 3), mat);
+    browR.position.set(-1.5, 4.5, 0);
+    browR.rotation.x = -0.2;
+    this.skullGroup.add(browR);
+
+    // Lower Jaw
+    const jaw = new THREE.Mesh(new THREE.BoxGeometry(3, 1.5, 7), mat);
+    jaw.position.set(0, 0, 2.5);
+    jaw.rotation.x = 0.3; // Open mouth roaring
+    this.skullGroup.add(jaw);
+    
+    // Teeth (Upper)
+    for(let i=0; i<4; i++) {
+      const tooth = new THREE.Mesh(new THREE.ConeGeometry(0.2, 1, 4), mat);
+      tooth.rotation.x = Math.PI;
+      tooth.position.set(1.2, 1, 2 + i);
+      this.skullGroup.add(tooth);
+      
+      const toothR = tooth.clone();
+      toothR.position.set(-1.2, 1, 2 + i);
+      this.skullGroup.add(toothR);
+    }
+    
+    // Ambient / Spot lights specifically for the fossil
+    const spot = new THREE.SpotLight(0xffffff, 200, 50);
+    spot.position.set(5, 10, 5);
+    spot.target = cranium;
+    this.group.add(spot);
+    
+    const fill = new THREE.PointLight(0xff5500, 100, 30);
+    fill.position.set(-5, 2, 5);
+    this.group.add(fill);
+
+    this.skullGroup.position.set(0, -6, -10);
+    this.skullGroup.rotation.y = -Math.PI / 4;
+    this.group.add(this.skullGroup);
   }
 
   _buildMeteor() {
@@ -128,7 +186,7 @@ export class Era8_Dinosaurs {
     const pos = new Float32Array(count * 3);
     for(let i=0; i<count; i++) {
       pos[i*3] = (Math.random() - 0.5) * 6;
-      pos[i*3+1] = Math.random() * 50; // Trail stretches up
+      pos[i*3+1] = Math.random() * 50; 
       pos[i*3+2] = (Math.random() - 0.5) * 6;
     }
     tGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -141,7 +199,6 @@ export class Era8_Dinosaurs {
         void main() {
           vec3 p = position;
           vY = p.y;
-          // Fire turbulence
           p.x += sin(p.y * 0.5 + time * 15.0) * (p.y * 0.05);
           p.z += cos(p.y * 0.5 + time * 15.0) * (p.y * 0.05);
           gl_PointSize = (15.0 / p.y) * (15.0 / - (modelViewMatrix * vec4(p, 1.0)).z);
@@ -152,7 +209,6 @@ export class Era8_Dinosaurs {
         uniform float opacity;
         varying float vY;
         void main() {
-          // Circular particle
           vec2 xy = gl_PointCoord.xy - vec2(0.5);
           if (length(xy) > 0.5) discard;
 
@@ -172,7 +228,7 @@ export class Era8_Dinosaurs {
     this.meteorGroup.lookAt(0, -10, 0);
     this.group.add(this.meteorGroup);
 
-    // Impact Flash (Screen space bloom effect via simple quad)
+    // Impact Flash
     const flashGeo = new THREE.PlaneGeometry(200, 200);
     const flashMat = new THREE.MeshBasicMaterial({
       color: 0xffffee,
@@ -210,7 +266,6 @@ export class Era8_Dinosaurs {
     // Meteor travels and crashes at t=0.7
     if (t < 0.7) {
       const mt = t / 0.7;
-      // Exponential fall to feel fast at the end
       const easeMt = Math.pow(mt, 3.0);
       this.meteorGroup.position.set(
         THREE.MathUtils.lerp(-100, 0, easeMt),
@@ -218,22 +273,26 @@ export class Era8_Dinosaurs {
         THREE.MathUtils.lerp(-100, 0, easeMt)
       );
       this.meteorGroup.visible = true;
-      this.terrainMat.uniforms.uImpact.value = 0; // Peaceful
+      this.terrainMat.uniforms.uImpact.value = 0; 
       this.flash.material.opacity = 0;
+      
+      // Fossil is visible and intact
+      this.skullGroup.position.y = -6;
+      this.skullGroup.rotation.z = 0;
     } else {
       this.meteorGroup.visible = false;
+      const postT = (t - 0.7) / 0.3; 
+      this.terrainMat.uniforms.uImpact.value = 1.0; 
       
-      // Impact logic
-      const postT = (t - 0.7) / 0.3; // 0 to 1 after impact
-      
-      this.terrainMat.uniforms.uImpact.value = 1.0; // Crater & Lava appear instantly
-      
-      // Flash fade out
       if (postT < 0.2) {
-        this.flash.material.opacity = 1.0; // Instant massive flash
+        this.flash.material.opacity = 1.0; 
       } else {
         this.flash.material.opacity = 1.0 - ((postT - 0.2) / 0.8);
       }
+      
+      // Fossil sinks into the lava crater
+      this.skullGroup.position.y = -6 - (postT * 4);
+      this.skullGroup.rotation.z = postT * 0.5;
     }
   }
 
