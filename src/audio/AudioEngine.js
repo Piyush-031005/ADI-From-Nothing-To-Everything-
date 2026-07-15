@@ -1,16 +1,17 @@
 /**
- * AudioEngine — Web Audio API synthesis per era.
- * Generates highly distinct procedural soundscapes for each era.
+ * AudioEngine — Cinematic Web Audio API synthesis per era.
+ * Generates smooth, epic, Hans-Zimmer style soundscapes with heavy delay/reverb.
+ * STRICTLY uses Sine and Triangle waves (NO noise, NO square waves).
  */
 export class AudioEngine {
   constructor() {
     this.ctx        = null;
     this.masterGain = null;
+    this.delayNode  = null;
     this.currentEra = -1;
     this._nodes     = [];
 
-    // Since AudioEngine is instantiated AFTER the user clicks the loader,
-    // we can initialize the AudioContext immediately!
+    // Initialize immediately
     this._init();
   }
 
@@ -18,15 +19,14 @@ export class AudioEngine {
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       
-      // Ensure the context is running (sometimes browsers suspend it even after click)
       if (this.ctx.state === 'suspended') {
         this.ctx.resume();
       }
 
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.8; // BOOMING cinematic volume
+      this.masterGain.gain.value = 0.8; 
       
-      // Dynamic compressor to prevent clipping
+      // Dynamic compressor for smooth levels
       this.compressor = this.ctx.createDynamicsCompressor();
       this.compressor.threshold.setValueAtTime(-24, this.ctx.currentTime);
       this.compressor.knee.setValueAtTime(30, this.ctx.currentTime);
@@ -34,10 +34,19 @@ export class AudioEngine {
       this.compressor.attack.setValueAtTime(0.003, this.ctx.currentTime);
       this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
       
+      // Massive Cinematic Delay (Echo) for space feel
+      this.delayNode = this.ctx.createDelay();
+      this.delayNode.delayTime.value = 0.5; // Half second echo
+      const feedback = this.ctx.createGain();
+      feedback.gain.value = 0.4; // 40% feedback
+      
+      this.delayNode.connect(feedback);
+      feedback.connect(this.delayNode);
+      this.delayNode.connect(this.masterGain);
+
       this.masterGain.connect(this.compressor);
       this.compressor.connect(this.ctx.destination);
       
-      // Start playing if an era was already requested
       if (this.currentEra !== -1) {
         this._playEra(this.currentEra);
       }
@@ -56,64 +65,69 @@ export class AudioEngine {
   _fadeAndStopAll() {
     this._nodes.forEach(n => {
       try {
-        n.gain?.setTargetAtTime(0, this.ctx.currentTime, 1.0);
-        setTimeout(() => { try { n.source?.stop(); } catch(e) {} }, 2000);
+        // Slow, beautiful 3-second fade out
+        n.gain?.setTargetAtTime(0, this.ctx.currentTime, 1.5);
+        setTimeout(() => { try { n.source?.stop(); } catch(e) {} }, 4000);
       } catch(e) {}
     });
     this._nodes = [];
   }
 
   _playEra(index) {
-    // Highly distinct setups per era
+    // Pure, smooth, epic configurations (Hans Zimmer Interstellar style)
     const configs = [
-      // 0: The Void (Deepest Sub-bass rumbling)
+      // 0: The Void (Deepest Sub-bass rumbling, very smooth)
       [
-        { type: 'sine', freq: 30, gain: 0.8 }, 
-        { type: 'triangle', freq: 31, gain: 0.5, lfo: { freq: 0.1, depth: 2 } }
+        { type: 'sine', freq: 32.7, gain: 0.8 }, // C1
+        { type: 'sine', freq: 49.0, gain: 0.4 }  // G1
       ],
-      // 1: Singularity (Tension rising, high pitch whine + sub)
+      // 1: Singularity (Tension rising, very slow LFO)
       [
-        { type: 'sine', freq: 40, gain: 0.8 }, 
-        { type: 'sawtooth', freq: 400, gain: 0.1, filter: { type: 'lowpass', freq: 500, lfoFreq: 0.5 } }
+        { type: 'sine', freq: 65.4, gain: 0.6 }, // C2
+        { type: 'triangle', freq: 130.8, gain: 0.2, filter: { type: 'lowpass', freq: 400 } } 
       ],
-      // 2: Big Bang (Massive explosion - heavy noise + square bass)
+      // 2: Big Bang (Massive bass hit, slow fade)
       [
-        { type: 'noise', gain: 0.4, filter: { type: 'lowpass', freq: 1000 } }, 
-        { type: 'square', freq: 40, gain: 0.6 }
+        { type: 'triangle', freq: 32.7, gain: 1.0, filter: { type: 'lowpass', freq: 200 } }, 
+        { type: 'sine', freq: 65.4, gain: 0.8 }
       ],
-      // 3: First Stars (High crystalline frequencies)
+      // 3: First Stars (High crystalline, echoing choral)
       [
-        { type: 'sine', freq: 880, gain: 0.1 }, 
-        { type: 'triangle', freq: 1760, gain: 0.05, lfo: { freq: 2, depth: 10 } }
+        { type: 'sine', freq: 523.25, gain: 0.2 }, // C5
+        { type: 'sine', freq: 659.25, gain: 0.15 }, // E5
+        { type: 'triangle', freq: 783.99, gain: 0.1, filter: { type: 'lowpass', freq: 1000 } } // G5
       ],
-      // 4: Stellar Death (Dark sweeping drone)
+      // 4: Stellar Death (Dark, smooth drone)
       [
-        { type: 'sawtooth', freq: 55, gain: 0.3, filter: { type: 'lowpass', freq: 150, sweep: true } }
+        { type: 'sine', freq: 43.65, gain: 0.5 }, // F1
+        { type: 'triangle', freq: 87.31, gain: 0.2, filter: { type: 'lowpass', freq: 300 } }
       ],
-      // 5: Solar System (Calm, sparse harmonics)
+      // 5: Solar System (Calm, sweeping harmonics)
       [
-        { type: 'sine', freq: 220, gain: 0.2 }, 
-        { type: 'sine', freq: 330, gain: 0.1 }
+        { type: 'sine', freq: 130.81, gain: 0.4 }, // C3
+        { type: 'sine', freq: 196.00, gain: 0.3 }  // G3
       ],
-      // 6: Earth (Ocean roar via filtered noise)
+      // 6: Earth (Warm, deep oceans)
       [
-        { type: 'noise', gain: 0.3, filter: { type: 'lowpass', freq: 400, lfoFreq: 0.2 } },
-        { type: 'sine', freq: 65, gain: 0.5 }
+        { type: 'sine', freq: 65.41, gain: 0.6 },  // C2
+        { type: 'triangle', freq: 130.81, gain: 0.2, filter: { type: 'lowpass', freq: 400, lfoFreq: 0.1 } }
       ],
-      // 7: Life / Cambrian (Bubbling / Organic Highs)
+      // 7: Life / Cambrian (Ethereal highs)
       [
-        { type: 'triangle', freq: 392, gain: 0.1, lfo: { freq: 8, depth: 50 } }, 
-        { type: 'sine', freq: 523, gain: 0.1, lfo: { freq: 4, depth: 20 } }
+        { type: 'sine', freq: 261.63, gain: 0.3 }, // C4
+        { type: 'sine', freq: 392.00, gain: 0.2 }, // G4
+        { type: 'sine', freq: 523.25, gain: 0.1 }  // C5
       ],
-      // 8: Dinosaurs (Harsh, chaotic growl + crackle for meteor)
+      // 8: Dinosaurs (Heavy, ominous bass - NO NOISE)
       [
-        { type: 'sawtooth', freq: 41, gain: 0.6, lfo: { freq: 15, depth: 10 } }, 
-        { type: 'noise', gain: 0.2, filter: { type: 'lowpass', freq: 2000 } }
+        { type: 'triangle', freq: 41.20, gain: 0.7, filter: { type: 'lowpass', freq: 150 } }, // E1
+        { type: 'sine', freq: 61.74, gain: 0.5 }   // B1
       ],
-      // 9: Humans (8-bit Digital stutters / technological pulse)
+      // 9: Humans (Clean, organized chords)
       [
-        { type: 'square', freq: 110, gain: 0.2, filter: { type: 'lowpass', freq: 600 } },
-        { type: 'square', freq: 220, gain: 0.1, lfo: { freq: 10, depth: 20 } }
+        { type: 'sine', freq: 110.00, gain: 0.4 }, // A2
+        { type: 'sine', freq: 164.81, gain: 0.3 }, // E3
+        { type: 'triangle', freq: 220.00, gain: 0.1, filter: { type: 'lowpass', freq: 600 } } // A3
       ],
       // 10: Future (Ethereal Sci-Fi Pad)
       [
@@ -121,11 +135,11 @@ export class AudioEngine {
         { type: 'sine', freq: 329.6, gain: 0.2 },
         { type: 'sine', freq: 392.0, gain: 0.2 }
       ],
-      // 11: Unknown World (Specimen) (Alien resonance, slow sweeps)
+      // 11: Unknown World (Specimen) (Epic, resonant, echoing)
       [
         { type: 'sine', freq: 130.8, gain: 0.4 },
-        { type: 'sawtooth', freq: 196, gain: 0.2, filter: { type: 'bandpass', freq: 800, sweep: true } },
-        { type: 'triangle', freq: 1046, gain: 0.05, lfo: { freq: 0.5, depth: 200 } }
+        { type: 'triangle', freq: 196, gain: 0.2, filter: { type: 'lowpass', freq: 800 } },
+        { type: 'sine', freq: 261.63, gain: 0.1 } 
       ],
     ];
 
@@ -136,57 +150,26 @@ export class AudioEngine {
   _playTone({ type, freq, gain: gainVal, filter, lfo }) {
     if (!this.ctx) return;
     try {
-      let source;
-      if (type === 'noise') {
-        const bufferSize = this.ctx.sampleRate * 2;
-        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-        const data = buffer.getChannelData(0);
-        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
-        source = this.ctx.createBufferSource();
-        source.buffer = buffer;
-        source.loop = true;
-      } else {
-        source = this.ctx.createOscillator();
-        source.type = type;
-        source.frequency.value = freq;
-      }
+      const source = this.ctx.createOscillator();
+      source.type = type;
+      source.frequency.value = freq;
 
       const gainNode = this.ctx.createGain();
-      gainNode.gain.value = 0; // Start at 0 for fade in
+      gainNode.gain.value = 0; 
 
       let nodeToConnect = source;
 
-      // Pitch LFO (Vibrato / Glitch)
-      if (lfo && type !== 'noise') {
-        const lfoOsc = this.ctx.createOscillator();
-        lfoOsc.type = 'sine';
-        lfoOsc.frequency.value = lfo.freq;
-        const lfoGain = this.ctx.createGain();
-        lfoGain.gain.value = lfo.depth;
-        lfoOsc.connect(lfoGain);
-        lfoGain.connect(source.frequency);
-        lfoOsc.start();
-      }
-
-      // Advanced Filter
       if (filter) {
         const filterNode = this.ctx.createBiquadFilter();
         filterNode.type = filter.type;
         filterNode.frequency.value = filter.freq;
         
-        // Filter Sweep effect
-        if (filter.sweep) {
-          filterNode.frequency.setValueAtTime(100, this.ctx.currentTime);
-          filterNode.frequency.exponentialRampToValueAtTime(2000, this.ctx.currentTime + 5);
-        }
-        
-        // Filter LFO (Wah-Wah / Ocean roar effect)
         if (filter.lfoFreq) {
           const flfo = this.ctx.createOscillator();
           flfo.type = 'sine';
           flfo.frequency.value = filter.lfoFreq;
           const flfoGain = this.ctx.createGain();
-          flfoGain.gain.value = filter.freq * 0.8; // Depth
+          flfoGain.gain.value = filter.freq * 0.5; 
           flfo.connect(flfoGain);
           flfoGain.connect(filterNode.frequency);
           flfo.start();
@@ -196,12 +179,17 @@ export class AudioEngine {
         nodeToConnect = filterNode;
       }
 
+      // Connect to main gain
       nodeToConnect.connect(gainNode);
+      
+      // Split the signal: one to master, one to delay (echo)
       gainNode.connect(this.masterGain);
+      gainNode.connect(this.delayNode);
+      
       source.start();
 
-      // Sharp attack for big bang, slow fade for others
-      gainNode.gain.setTargetAtTime(gainVal, this.ctx.currentTime, 0.5);
+      // Very slow, epic 2-second fade-in
+      gainNode.gain.setTargetAtTime(gainVal, this.ctx.currentTime, 1.0);
 
       this._nodes.push({ source, gain: gainNode });
     } catch(e) {
