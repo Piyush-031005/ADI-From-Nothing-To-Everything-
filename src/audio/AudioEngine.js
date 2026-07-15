@@ -1,16 +1,16 @@
 /**
  * AudioEngine — Cinematic DJ Mix Engine
  * Manages playback of curated MP3 tracks with seamless crossfading.
- * Tracks loop continuously. If scrolling back to an active track, it does not restart.
+ * Boosts volume via Web Audio API GainNode.
  */
 import { gsap } from 'gsap';
 
 export class AudioEngine {
   constructor() {
     this.currentEra = -1;
-    this.tracks = {}; // Cache of HTMLAudioElements
+    this.tracks = {}; // Cache of { audio, gainNode }
     this.activeTrackUrl = null;
-    this.activeAudio = null;
+    this.activeTrackObj = null;
 
     // Track mapping
     this.eraToTrack = {
@@ -27,76 +27,103 @@ export class AudioEngine {
       10: '/music/cyberpunk future.mp3',
       11: '/music/unknown last era.mp3'
     };
-
-    // Preload tracks
-    this._preloadAll();
+    
+    this.ctx = null;
+    this.masterGain = null;
+    this._initialized = false;
   }
 
-  _preloadAll() {
+  // Must be called on user click to unlock AudioContext
+  _init() {
+    if (this._initialized) return;
+    this._initialized = true;
+
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    this.ctx = new AudioContext();
+    this.masterGain = this.ctx.createGain();
+    
+    // BOOST VOLUME BY 3.5x (Since the user said it's very low)
+    this.masterGain.gain.value = 3.5; 
+    this.masterGain.connect(this.ctx.destination);
+
     const urls = [...new Set(Object.values(this.eraToTrack))];
     urls.forEach(url => {
       const audio = new Audio(url);
       audio.loop = true;
-      audio.volume = 0; // Start silenced for crossfading
-      this.tracks[url] = audio;
+      audio.crossOrigin = "anonymous";
+      
+      const trackGain = this.ctx.createGain();
+      trackGain.gain.value = 0; // Start silenced
+      
+      try {
+        const source = this.ctx.createMediaElementSource(audio);
+        source.connect(trackGain);
+        trackGain.connect(this.masterGain);
+      } catch(e) {
+        console.warn("Could not create media element source", e);
+      }
+
+      this.tracks[url] = { audio, gainNode: trackGain };
     });
   }
 
   setEra(index) {
+    if (!this._initialized) this._init();
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+
     if (index === this.currentEra) return;
     this.currentEra = index;
     
     const targetUrl = this.eraToTrack[index];
     if (!targetUrl) return;
 
-    // If the requested track is already the active one, do nothing (seamless continuous playback)
     if (this.activeTrackUrl === targetUrl) {
       return; 
     }
 
-    // Special rule: Singularity plays after 3 seconds
-    if (index === 1) {
-      this._fadeTo(targetUrl, 3000);
-    } else {
-      this._fadeTo(targetUrl, 0);
-    }
+    this._fadeTo(targetUrl, index);
   }
 
-  _fadeTo(targetUrl, delayMs) {
-    const nextAudio = this.tracks[targetUrl];
-    if (!nextAudio) return;
+  _fadeTo(targetUrl, eraIndex) {
+    const nextTrack = this.tracks[targetUrl];
+    if (!nextTrack) return;
 
-    // If there is an active track playing, fade it out
-    if (this.activeAudio && this.activeAudio !== nextAudio) {
-      const prevAudio = this.activeAudio;
-      gsap.to(prevAudio, {
-        volume: 0,
+    // Fade out previous
+    if (this.activeTrackObj && this.activeTrackObj !== nextTrack) {
+      const prev = this.activeTrackObj;
+      gsap.to(prev.gainNode.gain, {
+        value: 0,
         duration: 2.5,
         ease: 'power2.inOut',
         onComplete: () => {
-          prevAudio.pause();
+          prev.audio.pause();
         }
       });
     }
 
     this.activeTrackUrl = targetUrl;
-    this.activeAudio = nextAudio;
+    this.activeTrackObj = nextTrack;
 
-    // Fade in the new track
-    setTimeout(() => {
-      // Ensure it's playing
-      const playPromise = nextAudio.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(e => {
-          console.warn("Audio play failed (maybe no interaction yet):", e);
-        });
-      }
+    // Special rule: Singularity starts exactly from 6 seconds
+    if (eraIndex === 1) {
+      nextTrack.audio.currentTime = 6.0;
+    }
 
-      gsap.to(nextAudio, {
-        volume: 1.0,
-        duration: 3.0,
-        ease: 'power2.inOut'
+    // Ensure it's playing
+    const playPromise = nextTrack.audio.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(e => {
+        console.warn("Audio play failed:", e);
       });
-    }, delayMs);
+    }
+
+    // Fade in new
+    gsap.to(nextTrack.gainNode.gain, {
+      value: 1.0, // This is 1.0 * masterGain (3.5) = 3.5x boost
+      duration: 3.0,
+      ease: 'power2.inOut'
+    });
   }
 }
