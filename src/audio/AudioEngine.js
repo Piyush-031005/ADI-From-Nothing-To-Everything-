@@ -1,7 +1,7 @@
 /**
  * AudioEngine — Cinematic DJ Mix Engine
  * Manages playback of curated MP3 tracks with seamless crossfading.
- * Boosts volume via Web Audio API GainNode.
+ * Boosts volume cleanly via Compressor to prevent digital distortion.
  */
 import { gsap } from 'gsap';
 
@@ -12,24 +12,25 @@ export class AudioEngine {
     this.activeTrackUrl = null;
     this.activeTrackObj = null;
 
-    // Track mapping
+    // Track mapping with ?v=2 cache buster to force browser to grab updated MP3s
     this.eraToTrack = {
-      0: '/music/void.mp3',
-      1: '/music/singularity.mp3',
-      2: '/music/bigbang.mp3',
-      3: '/music/stars.mp3',
-      4: '/music/black hole.mp3',
-      5: '/music/rise of soalr system and earth.mp3',
-      6: '/music/rise of soalr system and earth.mp3',
-      7: '/music/camprian perod.mp3',
-      8: '/music/dinosaur.mp3',
-      9: '/music/human.mp3',
-      10: '/music/cyberpunk future.mp3',
-      11: '/music/unknown last era.mp3'
+      0: '/music/void.mp3?v=2',
+      1: '/music/singularity.mp3?v=2',
+      2: '/music/bigbang.mp3?v=2',
+      3: '/music/stars.mp3?v=2',
+      4: '/music/black hole.mp3?v=2',
+      5: '/music/rise of soalr system and earth.mp3?v=2',
+      6: '/music/rise of soalr system and earth.mp3?v=2',
+      7: '/music/camprian perod.mp3?v=2',
+      8: '/music/dinosaur.mp3?v=2',
+      9: '/music/human.mp3?v=2',
+      10: '/music/cyberpunk future.mp3?v=2',
+      11: '/music/unknown last era.mp3?v=2'
     };
     
     this.ctx = null;
     this.masterGain = null;
+    this.compressor = null;
     this._initialized = false;
   }
 
@@ -40,11 +41,21 @@ export class AudioEngine {
 
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AudioContext();
-    this.masterGain = this.ctx.createGain();
     
-    // BOOST VOLUME BY 3.5x (Since the user said it's very low)
-    this.masterGain.gain.value = 3.5; 
-    this.masterGain.connect(this.ctx.destination);
+    this.masterGain = this.ctx.createGain();
+    // Reduce from 3.5x to 1.5x to prevent harsh digital clipping
+    this.masterGain.gain.value = 1.5; 
+    
+    // Use a compressor to cleanly boost perceived loudness without distortion
+    this.compressor = this.ctx.createDynamicsCompressor();
+    this.compressor.threshold.setValueAtTime(-15, this.ctx.currentTime);
+    this.compressor.knee.setValueAtTime(10, this.ctx.currentTime);
+    this.compressor.ratio.setValueAtTime(8, this.ctx.currentTime);
+    this.compressor.attack.setValueAtTime(0.005, this.ctx.currentTime);
+    this.compressor.release.setValueAtTime(0.2, this.ctx.currentTime);
+
+    this.masterGain.connect(this.compressor);
+    this.compressor.connect(this.ctx.destination);
 
     const urls = [...new Set(Object.values(this.eraToTrack))];
     urls.forEach(url => {
@@ -121,9 +132,9 @@ export class AudioEngine {
       });
     }
 
-    // Fade in new
+    // Fade in new (Gain multiplier goes to 1.0, masterGain does the overall boost)
     gsap.to(nextTrack.gainNode.gain, {
-      value: 1.0, // This is 1.0 * masterGain (3.5) = 3.5x boost
+      value: 1.0,
       duration: 3.0,
       ease: 'power2.inOut'
     });
