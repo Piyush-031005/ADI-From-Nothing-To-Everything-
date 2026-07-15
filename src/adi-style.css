@@ -1,12 +1,12 @@
 /* 
-  ĀDI — DIGITAL ECOLOGY HUD STYLES
-  Fonts: Space Mono for data/HUD, Inter for clean typography.
+  ĀDI — ELEGANT CINEMATIC STYLES
+  Fonts: Cormorant Garamond for Era titles, Inter for clean UI.
 */
 :root {
-  --hud-color: #ffffff;
-  --hud-muted: rgba(255, 255, 255, 0.4);
-  --hud-glow: rgba(255, 255, 255, 0.2);
-  --hud-highlight: #ff3366; /* Scanner red/pink */
+  --color-text: rgba(255, 255, 255, 0.85);
+  --color-muted: rgba(255, 255, 255, 0.4);
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-sans: 'Inter', sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -15,8 +15,8 @@ body, html {
   margin: 0; padding: 0;
   width: 100%; height: 100%;
   background-color: #000;
-  color: var(--hud-color);
-  font-family: 'Space Mono', monospace;
+  color: var(--color-text);
+  font-family: var(--font-sans);
   overflow: hidden;
   user-select: none;
 }
@@ -25,7 +25,6 @@ body, html {
   position: fixed; top: 0; left: 0;
   width: 100vw; height: 100vh;
   z-index: 1;
-  /* Add an inverted / high contrast filter to the whole canvas to simulate the "scan" aesthetic later if we want, or do it in post-processing */
 }
 
 /* Scroll driver */
@@ -42,47 +41,88 @@ body, html {
   height: 1200vh; /* 12 eras * 100vh */
 }
 
-/* --- CINEMATIC LOADER --- */
+/* --- MARVEL-STYLE LOADER --- */
 #loader {
   position: fixed; top: 0; left: 0;
-  width: 100%; height: 100%;
+  width: 100vw; height: 100vh;
   background: #000;
   z-index: 9999;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  transition: opacity 1s ease;
+  overflow: hidden;
+  perspective: 1000px;
 }
 
-#loader-sequence {
+/* Cosmic background using an animated gradient simulating a nebula */
+#loader-cosmic-bg {
   position: absolute;
-  top: 40%;
-  width: 80%;
-  text-align: center;
+  top: -50%; left: -50%;
+  width: 200%; height: 200%;
+  background: radial-gradient(circle at center, #1a0b2e 0%, #000000 60%),
+              url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>');
+  background-blend-mode: color-dodge;
+  opacity: 0.8;
+  animation: rotateCosmic 60s linear infinite;
+  z-index: 1;
 }
 
-#loader-sequence p {
-  font-family: 'Inter', sans-serif;
-  font-weight: 300;
-  font-size: 1.5rem;
-  letter-spacing: 0.1em;
-  opacity: 0;
-  transform: translateY(10px) scale(0.98);
-  transition: opacity 2s ease, transform 3s ease-out;
-  position: absolute;
-  width: 100%;
-  margin: 0;
+@keyframes rotateCosmic {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+#loader-text-mask {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 25vw; /* Massive */
+  letter-spacing: -0.05em;
+  color: #fff;
+  z-index: 2;
+  /* CSS mask to show background THROUGH the text */
+  mix-blend-mode: multiply; /* Inverts so white text becomes a window to the background */
+  background: #fff; /* The whole screen is white */
+  color: #000; /* Text is black, which lets the cosmic background show through due to multiply */
+  width: 100%; height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 3s cubic-bezier(0.7, 0, 0.3, 1), opacity 2s ease;
+  transform-origin: center center;
+}
+
+/* We need a wrapper technique for true background-clip text that zooms */
+#loader {
+  background: #000;
+}
+#loader-text-mask {
+  background: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.65" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noiseFilter)"/></svg>'),
+              radial-gradient(circle at center, #3a1c61 0%, #000000 70%);
+  background-blend-mode: color-dodge;
+  background-size: cover;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  background-position: center;
+  /* Animation for the stars inside the text */
+  animation: panBg 20s linear infinite;
+}
+
+@keyframes panBg {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 100% 100%; }
 }
 
 #loader-hint {
   position: absolute;
   bottom: 10%;
+  font-family: var(--font-sans);
   font-size: 0.8rem;
-  letter-spacing: 0.2em;
-  color: var(--hud-muted);
-  opacity: 0; /* Shown by JS initially */
-  transition: opacity 0.5s ease;
+  letter-spacing: 0.3em;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  z-index: 3;
   animation: pulseHint 2s infinite;
   cursor: pointer;
 }
@@ -93,179 +133,109 @@ body, html {
 }
 
 
-/* --- UI OVERLAY (DIGITAL ECOLOGY) --- */
+/* --- UI OVERLAY --- */
 #ui-overlay {
   position: fixed; top: 0; left: 0;
   width: 100%; height: 100%;
   pointer-events: none;
   z-index: 50;
-  mix-blend-mode: difference; /* Critical for the X-Ray look on bright backgrounds */
 }
 
-/* Global Crosshairs & Corners */
-.hud-corner {
+/* Brand - Top Left */
+#brand {
   position: absolute;
-  width: 40px; height: 40px;
-  border: 1px solid var(--hud-muted);
+  top: 40px; left: 50px;
 }
-.hud-corner.top-left { top: 20px; left: 20px; border-right: none; border-bottom: none; }
-.hud-corner.top-right { top: 20px; right: 20px; border-left: none; border-bottom: none; }
-.hud-corner.bottom-left { bottom: 20px; left: 20px; border-right: none; border-top: none; }
-.hud-corner.bottom-right { bottom: 20px; right: 20px; border-left: none; border-top: none; }
-
-.hud-crosshair {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 100vw; height: 100vh;
-  transform: translate(-50%, -50%);
+#brand-name {
+  font-family: var(--font-serif);
+  font-size: 1.5rem;
+  letter-spacing: 0.2em;
+  margin-bottom: 4px;
 }
-.hud-crosshair::before {
-  content: ''; position: absolute;
-  top: 0; left: 50%; width: 1px; height: 100%;
-  background: linear-gradient(to bottom, transparent, var(--hud-glow), transparent);
-}
-.hud-crosshair::after {
-  content: ''; position: absolute;
-  top: 50%; left: 0; width: 100%; height: 1px;
-  background: linear-gradient(to right, transparent, var(--hud-glow), transparent);
-}
-
-/* Tech Text blocks */
-.hud-text {
-  position: absolute;
+#brand-tag {
   font-size: 0.65rem;
-  line-height: 1.5;
-  letter-spacing: 0.05em;
-  color: var(--hud-color);
+  letter-spacing: 0.15em;
+  color: var(--color-muted);
+  text-transform: uppercase;
 }
-.top-left-text { top: 70px; left: 30px; }
-.top-right-text { top: 70px; right: 30px; text-align: right; }
-.highlight { color: var(--hud-highlight); }
-.muted { color: var(--hud-muted); }
 
+/* Year Counter - Top Right */
+#year-counter {
+  position: absolute;
+  top: 45px; right: 50px;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+  color: var(--color-text);
+}
 
-/* Center Era Target Box */
+/* Era Display - Center */
 #era-display {
   position: absolute;
   top: 50%; left: 50%;
   transform: translate(-50%, -50%);
   text-align: center;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
+  opacity: 0; /* JS controls fade */
 }
-
-#era-target-box {
-  position: absolute;
-  top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  width: 300px; height: 300px;
-  border: 1px solid rgba(255,255,255,0.1);
-}
-.target-corner {
-  position: absolute;
-  width: 20px; height: 20px;
-  border: 2px solid var(--hud-color);
-}
-.target-corner.tl { top: -2px; left: -2px; border-right: none; border-bottom: none; }
-.target-corner.tr { top: -2px; right: -2px; border-left: none; border-bottom: none; }
-.target-corner.bl { bottom: -2px; left: -2px; border-right: none; border-top: none; }
-.target-corner.br { bottom: -2px; right: -2px; border-left: none; border-top: none; }
-
-.target-cross {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 10px; height: 10px;
-  transform: translate(-50%, -50%);
-}
-.target-cross::before { content:''; position:absolute; top:-5px; left:4px; width:2px; height:20px; background:var(--hud-color); }
-.target-cross::after { content:''; position:absolute; top:4px; left:-5px; width:20px; height:2px; background:var(--hud-color); }
-
-
-#era-number {
-  font-size: 0.7rem;
-  letter-spacing: 0.2em;
-  color: var(--hud-muted);
-  text-transform: uppercase;
-  margin-bottom: 20px;
-}
-
 #era-title {
-  font-family: 'Inter', sans-serif;
-  font-weight: 200;
-  font-size: 3rem;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-weight: 300;
+  font-size: 4rem;
+  letter-spacing: 0.1em;
+  margin-bottom: 10px;
+}
+#era-subtitle {
+  font-size: 0.9rem;
+  letter-spacing: 0.1em;
+  color: var(--color-muted);
+}
+
+/* Scroll Hint - Bottom Right */
+#scroll-hint {
+  position: absolute;
+  bottom: 50px; right: 50px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+.scroll-hint-text {
+  font-size: 0.7rem;
   letter-spacing: 0.15em;
   text-transform: uppercase;
-  text-shadow: 0 0 10px var(--hud-glow);
+  color: var(--color-muted);
+}
+.scroll-hint-arrow {
+  width: 1px; height: 30px;
+  background: linear-gradient(to bottom, var(--color-muted) 0%, transparent 100%);
 }
 
-#era-subtitle {
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  color: var(--hud-muted);
-  max-width: 400px;
-  line-height: 1.4;
-  margin-top: 15px;
-}
-
-#era-hexcode {
-  font-size: 0.6rem;
-  color: var(--hud-highlight);
-  margin-top: 100px; /* Push it down to the bottom of the target box */
-}
-
-/* Timeline */
+/* Timeline - Bottom Center */
 #timeline {
   position: absolute;
-  bottom: 80px; left: 50%;
+  bottom: 50px; left: 50%;
   transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 15px;
 }
-
 .timeline-dot {
   width: 4px; height: 4px;
-  border: 1px solid var(--hud-muted);
+  border-radius: 50%;
+  border: 1px solid var(--color-muted);
   transition: all 0.3s;
 }
 .timeline-dot.active {
-  background: var(--hud-color);
-  border-color: var(--hud-color);
-  box-shadow: 0 0 8px var(--hud-color);
+  background: var(--color-text);
+  border-color: var(--color-text);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
   transform: scale(1.5);
 }
 .timeline-line {
   width: 20px; height: 1px;
-  background: var(--hud-muted);
+  background: rgba(255, 255, 255, 0.1);
 }
 
-/* Year */
-#year-counter {
-  position: absolute;
-  top: 30px; right: 30px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.scan-line {
-  width: 30px; height: 1px;
-  background: var(--hud-color);
-  animation: scan 2s linear infinite;
-}
-@keyframes scan {
-  0% { transform: scaleX(0); transform-origin: left; }
-  50% { transform: scaleX(1); transform-origin: left; }
-  50.1% { transform: scaleX(1); transform-origin: right; }
-  100% { transform: scaleX(0); transform-origin: right; }
-}
-#year-value {
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-}
-
-/* Final Message */
+/* Final Message - Center */
 #final-message {
   position: absolute;
   top: 50%; left: 50%;
@@ -274,22 +244,19 @@ body, html {
   opacity: 0;
   pointer-events: none;
   transition: opacity 2s ease;
-  background: rgba(0,0,0,0.8);
-  padding: 40px;
-  border: 1px solid var(--hud-muted);
 }
-#final-message.visible { opacity: 1; }
-
+#final-message.visible {
+  opacity: 1;
+}
 #final-quote {
-  font-family: 'Inter', sans-serif;
-  font-weight: 300;
-  font-size: 1.5rem;
-  line-height: 1.5;
-  letter-spacing: 0.05em;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 2.5rem;
+  line-height: 1.4;
   margin-bottom: 20px;
 }
 #final-sub {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   letter-spacing: 0.2em;
-  color: var(--hud-highlight);
+  color: var(--color-muted);
 }

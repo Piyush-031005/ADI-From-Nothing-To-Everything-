@@ -1,56 +1,44 @@
 /**
- * Loader — Handles the Interstellar-style cinematic intro sequence.
+ * Loader — Handles the Marvel-style CSS mask zoom intro sequence.
  */
 export class Loader {
   constructor(onComplete) {
     this.container = document.getElementById('loader');
     this.hint = document.getElementById('loader-hint');
-    this.sequence = document.getElementById('loader-sequence');
-    this.textNodes = this.sequence ? this.sequence.querySelectorAll('p') : [];
+    this.textMask = document.getElementById('loader-text-mask');
+    this.cosmicBg = document.getElementById('loader-cosmic-bg');
     
     this.onComplete = onComplete;
     this.clicked = false;
-
-    // Show initial hint to click
-    this.hint.style.opacity = '1';
 
     this.container.addEventListener('click', () => {
       if (this.clicked) return;
       this.clicked = true;
       
-      // Hide hint, start sequence
+      // Hide hint
       this.hint.style.opacity = '0';
-      this.startCinematicSequence();
+      this.startMarvelIntro();
     });
   }
 
-  startCinematicSequence() {
-    let delay = 0;
+  startMarvelIntro() {
+    // 1. Zoom the text massively so the user flies "through" the letter A or D.
+    // Scale to 50x to ensure the camera goes completely through the transparent part of the mask.
+    this.textMask.style.transform = 'scale(50)';
     
-    // Fade each sentence in and out sequentially
-    this.textNodes.forEach((node, index) => {
-      setTimeout(() => {
-        node.style.opacity = '1';
-        node.style.transform = 'translateY(0) scale(1)';
-      }, delay);
-      
-      delay += 3000; // Visible for 3 seconds
-      
-      setTimeout(() => {
-        node.style.opacity = '0';
-        node.style.transform = 'translateY(-10px) scale(0.98)';
-      }, delay);
-      
-      delay += 1000; // 1 second gap before next sentence
-    });
-
-    // After the sequence finishes, remove loader and boot the experience
+    // 2. Fade out the text mask container completely after zooming
+    this.textMask.style.opacity = '0';
+    
+    // 3. Fade out the background layer
+    this.cosmicBg.style.opacity = '0';
+    
+    // 4. After the transition finishes (3 seconds), boot the experience
     setTimeout(() => {
       this.container.style.opacity = '0';
       setTimeout(() => {
         this.container.remove();
         this.onComplete();
-      }, 1000); // fade out duration
-    }, delay + 500);
+      }, 500); // fade out duration of the black loader screen itself
+    }, 2500);
   }
 }
