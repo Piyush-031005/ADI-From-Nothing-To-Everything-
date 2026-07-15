@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * Era 8 — DINOSAURS (Digital Ecology Scan)
- * X-Ray Wireframe Meteor Impact to simulate a data scan of the past.
+ * Era 8 — DINOSAURS
+ * Massive Meteor Impact. Smooth and cinematic.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
@@ -20,7 +20,6 @@ export class Era8_Dinosaurs {
     const geo = new THREE.PlaneGeometry(200, 200, 128, 128);
     geo.rotateX(-Math.PI * 0.5);
     
-    // X-Ray Wireframe shader
     this.terrainMat = new THREE.ShaderMaterial({
       uniforms: { 
         time: { value: 0 },
@@ -30,6 +29,7 @@ export class Era8_Dinosaurs {
         uniform float time;
         uniform float uImpact;
         varying vec3 vPos;
+        varying float vHeight;
         
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec2 mod289(vec2 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
@@ -66,6 +66,7 @@ export class Era8_Dinosaurs {
           
           pos.y = mix(h, h + crater + rim, uImpact);
           vPos = pos;
+          vHeight = pos.y;
           
           gl_Position = projectionMatrix * modelViewMatrix * vec4(pos, 1.0);
         }
@@ -74,28 +75,28 @@ export class Era8_Dinosaurs {
         uniform float time;
         uniform float uImpact;
         varying vec3 vPos;
+        varying float vHeight;
         
         void main() {
-          // Grid / Scanline effect
-          float gridX = step(0.95, fract(vPos.x * 0.5));
-          float gridZ = step(0.95, fract(vPos.z * 0.5));
-          float grid = max(gridX, gridZ);
+          // Smooth terrain colors
+          vec3 rock = vec3(0.05, 0.08, 0.05); 
+          vec3 scorched = vec3(0.02, 0.02, 0.02); 
+          vec3 lava = vec3(1.0, 0.2, 0.0);
           
-          vec3 color = vec3(0.0, 1.0, 0.5) * grid; // Green scan
+          vec3 baseColor = mix(rock, scorched, uImpact);
           
-          // Flash red on impact
-          color = mix(color, vec3(1.0, 0.0, 0.2) * grid, uImpact);
+          float lavaGlow = smoothstep(-2.0, -10.0, vHeight);
+          lavaGlow *= (0.8 + 0.2 * sin(time * 2.0 + vPos.x * 2.0));
+          
+          vec3 color = mix(baseColor, lava, lavaGlow * uImpact);
           
           float dist = gl_FragCoord.z / gl_FragCoord.w;
           float fog = smoothstep(20.0, 100.0, dist);
           color = mix(color, vec3(0.0), fog);
 
-          gl_FragColor = vec4(color, grid * 0.5);
+          gl_FragColor = vec4(color, 1.0);
         }
-      `,
-      transparent: true,
-      blending: THREE.AdditiveBlending,
-      wireframe: true // Force wireframe for X-Ray aesthetic
+      `
     });
     this.terrain = new THREE.Mesh(geo, this.terrainMat);
     this.terrain.position.y = -10;
@@ -105,25 +106,19 @@ export class Era8_Dinosaurs {
   _buildMeteor() {
     this.meteorGroup = new THREE.Group();
     
-    // Data Core of the meteor
-    const geo = new THREE.IcosahedronGeometry(3, 1);
-    const mat = new THREE.MeshBasicMaterial({ 
-      color: 0xff3366, 
-      wireframe: true,
-      transparent: true,
-      opacity: 0.8
-    });
+    const geo = new THREE.IcosahedronGeometry(4, 2);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xffffee });
     this.meteorCore = new THREE.Mesh(geo, mat);
     this.meteorGroup.add(this.meteorCore);
     
-    // Trail (Particles as data points)
+    // Smooth particle trail
     const tGeo = new THREE.BufferGeometry();
-    const count = 15000;
+    const count = 10000;
     const pos = new Float32Array(count * 3);
     for(let i=0; i<count; i++) {
-      pos[i*3] = (Math.random() - 0.5) * 6;
-      pos[i*3+1] = Math.random() * 50; 
-      pos[i*3+2] = (Math.random() - 0.5) * 6;
+      pos[i*3] = (Math.random() - 0.5) * 8;
+      pos[i*3+1] = Math.random() * 60; 
+      pos[i*3+2] = (Math.random() - 0.5) * 8;
     }
     tGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     
@@ -135,9 +130,9 @@ export class Era8_Dinosaurs {
         void main() {
           vec3 p = position;
           vY = p.y;
-          p.x += sin(p.y * 0.5 + time * 15.0) * (p.y * 0.05);
-          p.z += cos(p.y * 0.5 + time * 15.0) * (p.y * 0.05);
-          gl_PointSize = (4.0 / p.y) * (15.0 / - (modelViewMatrix * vec4(p, 1.0)).z);
+          p.x += sin(p.y * 0.2 + time * 5.0) * (p.y * 0.02);
+          p.z += cos(p.y * 0.2 + time * 5.0) * (p.y * 0.02);
+          gl_PointSize = (10.0 / p.y) * (15.0 / - (modelViewMatrix * vec4(p, 1.0)).z);
           gl_Position = projectionMatrix * modelViewMatrix * vec4(p, 1.0);
         }
       `,
@@ -145,8 +140,10 @@ export class Era8_Dinosaurs {
         uniform float opacity;
         varying float vY;
         void main() {
-          float alpha = smoothstep(50.0, 0.0, vY);
-          vec3 col = mix(vec3(1.0, 0.0, 0.2), vec3(1.0, 0.8, 0.2), alpha);
+          vec2 xy = gl_PointCoord.xy - vec2(0.5);
+          if (length(xy) > 0.5) discard;
+          float alpha = smoothstep(60.0, 0.0, vY);
+          vec3 col = mix(vec3(1.0, 0.0, 0.0), vec3(1.0, 0.8, 0.2), alpha);
           gl_FragColor = vec4(col, alpha * opacity);
         }
       `,
@@ -161,10 +158,9 @@ export class Era8_Dinosaurs {
     this.meteorGroup.lookAt(0, -10, 0);
     this.group.add(this.meteorGroup);
 
-    // Scan Flash
     const flashGeo = new THREE.PlaneGeometry(200, 200);
     const flashMat = new THREE.MeshBasicMaterial({
-      color: 0xff3366,
+      color: 0xffffee,
       transparent: true,
       opacity: 0,
       blending: THREE.AdditiveBlending,
@@ -196,7 +192,6 @@ export class Era8_Dinosaurs {
   }
 
   onScrollT(t) {
-    // Meteor travels and crashes at t=0.7
     if (t < 0.7) {
       const mt = t / 0.7;
       const easeMt = Math.pow(mt, 3.0);

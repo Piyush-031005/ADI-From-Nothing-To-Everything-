@@ -1,8 +1,8 @@
 import * as THREE from 'three';
 
 /**
- * Era 11 — THE UNKNOWN WORLD (Specimen Scan)
- * A massive, iridescent, holographic alien blob being scanned by the HUD.
+ * Era 11 — THE UNKNOWN WORLD
+ * A massive, iridescent, holographic alien blob. Smooth and beautiful.
  */
 export class Era11_Unknown {
   constructor(experience) {
@@ -17,10 +17,8 @@ export class Era11_Unknown {
   }
 
   _buildSpecimen() {
-    // High poly sphere for smooth vertex displacement
-    const geo = new THREE.SphereGeometry(6, 256, 256);
+    const geo = new THREE.SphereGeometry(8, 256, 256);
     
-    // The "Specimen" Shader - Iridescent, inverted, glitching holographic fluid
     this.specimenMat = new THREE.ShaderMaterial({
       uniforms: {
         uTime: { value: 0 },
@@ -33,7 +31,6 @@ export class Era11_Unknown {
         varying vec3 vViewPosition;
         varying float vNoise;
         
-        // Simplex 3D Noise 
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -86,13 +83,10 @@ export class Era11_Unknown {
           
           vec3 p = position;
           
-          // Violent, glitchy liquid morphing
-          float noise = snoise(p * 0.4 + uTime * 0.8) * 2.0;
+          // Smooth, organic liquid morphing
+          float noise = snoise(p * 0.2 + uTime * 0.3) * 3.0;
           
-          // Add micro-glitches based on time
-          float glitch = step(0.98, fract(sin(dot(p.xy, vec2(12.9898,78.233))) * 43758.5453 + uTime)) * 0.5;
-          
-          p += normal * (noise + glitch);
+          p += normal * noise;
           vNoise = noise;
 
           vec4 mvPosition = modelViewMatrix * vec4(p, 1.0);
@@ -108,31 +102,26 @@ export class Era11_Unknown {
         varying float vNoise;
         
         void main() {
-          // X-Ray / Holographic Colors
           vec3 viewDir = normalize(vViewPosition);
           float fresnel = dot(viewDir, vNormal);
           fresnel = clamp(1.0 - fresnel, 0.0, 1.0);
           
-          // Striations/Bands to simulate scan lines on the organism
-          float scan = step(0.5, fract(vUv.y * 50.0 + vNoise));
+          // Iridescent / Pearlescent colors
+          vec3 color1 = vec3(0.1, 0.4, 1.0); // Deep Blue
+          vec3 color2 = vec3(1.0, 0.2, 0.8); // Pink
+          vec3 color3 = vec3(0.0, 1.0, 0.8); // Cyan
           
-          // "Blue Flax" / Digital Ecology Palette: Electric Blue, White, Cyan
-          vec3 color1 = vec3(0.0, 1.0, 1.0); // Cyan
-          vec3 color2 = vec3(1.0, 1.0, 1.0); // Pure White core
-          vec3 color3 = vec3(0.1, 0.2, 1.0); // Deep Blue
+          float blend = (sin(vNoise * 2.0 + fresnel * 5.0) + 1.0) * 0.5;
           
-          vec3 baseColor = mix(color3, color1, smoothstep(0.0, 0.8, fresnel));
-          baseColor = mix(baseColor, color2, pow(fresnel, 3.0));
-          
-          // Apply scan lines
-          baseColor *= (0.5 + scan * 0.5);
+          vec3 baseColor = mix(color1, color2, blend);
+          baseColor = mix(baseColor, color3, pow(fresnel, 2.0));
           
           // Edge glow
-          float edgeGlow = pow(fresnel, 4.0) * 3.0;
+          float edgeGlow = pow(fresnel, 3.0) * 2.0;
           
           vec3 finalColor = baseColor + vec3(edgeGlow);
           
-          gl_FragColor = vec4(finalColor, uOpacity * fresnel * 1.5);
+          gl_FragColor = vec4(finalColor, uOpacity * fresnel * 2.0);
         }
       `,
       transparent: true,
@@ -142,26 +131,13 @@ export class Era11_Unknown {
 
     this.specimen = new THREE.Mesh(geo, this.specimenMat);
     this.group.add(this.specimen);
-    
-    // Add an inner wireframe to make it look like a technical model
-    const wireMat = new THREE.MeshBasicMaterial({
-      color: 0x00ffff,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.1,
-      blending: THREE.AdditiveBlending
-    });
-    this.specimenWire = new THREE.Mesh(geo, wireMat);
-    this.specimenWire.scale.setScalar(1.01);
-    this.group.add(this.specimenWire);
   }
 
   _buildDeepSpace() {
-    // Technical data points floating around the specimen
-    const count = 2000;
+    const count = 5000;
     const pos = new Float32Array(count * 3);
     for(let i=0; i<count; i++) {
-      const r = 20 + Math.random() * 50;
+      const r = 200 + Math.random() * 300;
       const phi = Math.acos((Math.random() * 2) - 1);
       const theta = Math.random() * Math.PI * 2;
       pos[i*3] = r * Math.sin(phi) * Math.cos(theta);
@@ -171,7 +147,7 @@ export class Era11_Unknown {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     const mat = new THREE.PointsMaterial({
-      color: 0xff3366, size: 0.2, transparent: true, opacity: 0.8
+      color: 0xffffff, size: 0.8, transparent: true, opacity: 0.6
     });
     this.stars = new THREE.Points(geo, mat);
     this.group.add(this.stars);
@@ -179,9 +155,9 @@ export class Era11_Unknown {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 0, 40),
-      new THREE.Vector3(-10, 5, 25),
-      new THREE.Vector3(0, 0, 15),
+      new THREE.Vector3(0, 0, 50),
+      new THREE.Vector3(-15, 10, 30),
+      new THREE.Vector3(0, 0, 20),
     ]);
     return { curve, lookAt: new THREE.Vector3(0, 0, 0) };
   }
@@ -190,7 +166,6 @@ export class Era11_Unknown {
     this.visible = true;
     this.group.visible = true;
     
-    // Trigger final message from UI
     const finalMsg = document.getElementById('final-message');
     if (finalMsg) finalMsg.classList.add('visible');
 
@@ -221,23 +196,15 @@ export class Era11_Unknown {
   }
 
   onScrollT(t) {
-    // Specimen pulses based on scroll
-    const scale = 1.0 + t * 0.3;
+    const scale = 1.0 + t * 0.5;
     this.specimen.scale.setScalar(scale);
-    this.specimenWire.scale.setScalar(scale * 1.01);
   }
 
   update(time) {
     if (!this.visible) return;
     this.specimenMat.uniforms.uTime.value = time;
-    this.specimen.rotation.y = time * 0.3;
-    this.specimen.rotation.z = time * 0.15;
-    
-    // Copy rotation to wireframe but displace vertex slightly using same time
-    this.specimenWire.rotation.copy(this.specimen.rotation);
-    // Since wireframe is a BasicMaterial, it won't displace on GPU unless we use ShaderMaterial, 
-    // but the rotation match is enough to look like a scanning shell.
-    
-    this.stars.rotation.y = time * -0.05;
+    this.specimen.rotation.y = time * 0.1;
+    this.specimen.rotation.z = time * 0.05;
+    this.stars.rotation.y = time * -0.01;
   }
 }
