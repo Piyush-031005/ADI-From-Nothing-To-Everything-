@@ -8,13 +8,16 @@ const ERA_COUNT = 12; // 0-11
 
 /**
  * ScrollController — Maps scroll progress → era index + within-era t.
- * Each era gets an equal segment of total scroll height.
+ * Implements lerp (linear interpolation) for buttery smooth camera movement.
  */
 export class ScrollController {
   constructor(experience) {
     this.exp         = experience;
     this.totalScroll = 0;
-    this.progress    = 0;   // 0-1 global
+    
+    this.targetProgress = 0; // Where the scrollbar is
+    this.progress       = 0; // Lerped value
+    
     this.eraIndex    = 0;
     this.eraT        = 0;   // 0-1 within era
 
@@ -22,6 +25,9 @@ export class ScrollController {
     if (!container) return;
 
     container.addEventListener('scroll', () => this._onScroll(container), { passive: true });
+    
+    // Start lerp loop
+    this._lerpLoop();
   }
 
   _onScroll(container) {
@@ -29,9 +35,13 @@ export class ScrollController {
     const maxScroll = container.scrollHeight - container.clientHeight;
 
     if (maxScroll <= 0) return;
-
-    this.progress = Math.min(scrollTop / maxScroll, 1.0);
-
+    this.targetProgress = Math.min(scrollTop / maxScroll, 1.0);
+  }
+  
+  _lerpLoop() {
+    // Lerp towards target (0.05 is the smoothing factor)
+    this.progress += (this.targetProgress - this.progress) * 0.05;
+    
     // Map to era
     const eraFloat = this.progress * ERA_COUNT;
     const newEra   = Math.min(Math.floor(eraFloat), ERA_COUNT - 1);
@@ -52,5 +62,7 @@ export class ScrollController {
       this.eraIndex = newEra;
       EventBus.emit(EVENTS.ERA_CHANGE, { index: newEra, t: this.eraT });
     }
+    
+    requestAnimationFrame(() => this._lerpLoop());
   }
 }

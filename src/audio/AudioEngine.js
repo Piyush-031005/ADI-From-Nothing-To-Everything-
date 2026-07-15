@@ -1,7 +1,6 @@
 /**
  * AudioEngine — Web Audio API synthesis per era.
- * No external audio files needed.
- * Each era gets a characteristic drone/tone/texture.
+ * No external audio files needed. Generates procedural cinematic Hans Zimmer style drones.
  */
 export class AudioEngine {
   constructor() {
@@ -20,8 +19,18 @@ export class AudioEngine {
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.12;
-      this.masterGain.connect(this.ctx.destination);
+      this.masterGain.gain.value = 0.2; // slight boost for cinematic feel
+      
+      // Dynamic compressor to prevent clipping when bass drops
+      this.compressor = this.ctx.createDynamicsCompressor();
+      this.compressor.threshold.setValueAtTime(-20, this.ctx.currentTime);
+      this.compressor.knee.setValueAtTime(10, this.ctx.currentTime);
+      this.compressor.ratio.setValueAtTime(12, this.ctx.currentTime);
+      this.compressor.attack.setValueAtTime(0.01, this.ctx.currentTime);
+      this.compressor.release.setValueAtTime(0.25, this.ctx.currentTime);
+      
+      this.masterGain.connect(this.compressor);
+      this.compressor.connect(this.ctx.destination);
     } catch(e) {
       console.warn('Audio context unavailable', e);
     }
@@ -30,56 +39,100 @@ export class AudioEngine {
   setEra(index) {
     if (!this.ctx || index === this.currentEra) return;
     this.currentEra = index;
-    this._stopAll();
+    this._fadeAndStopAll();
     this._playEra(index);
   }
 
-  _stopAll() {
+  _fadeAndStopAll() {
     this._nodes.forEach(n => {
       try {
-        n.gain?.setTargetAtTime(0, this.ctx.currentTime, 0.5);
-        setTimeout(() => { try { n.source?.stop(); } catch(e) {} }, 800);
+        n.gain?.setTargetAtTime(0, this.ctx.currentTime, 1.5);
+        setTimeout(() => { try { n.source?.stop(); } catch(e) {} }, 3000);
       } catch(e) {}
     });
     this._nodes = [];
   }
 
   _playEra(index) {
+    // Interstellar / Cinematic drones setup
     const configs = [
-      // Era 0: Void — very low rumble
-      [{ type: 'sine', freq: 18, gain: 0.3 }, { type: 'sine', freq: 22, gain: 0.1 }],
-      // Era 1: Singularity — rising tone
-      [{ type: 'sine', freq: 55, gain: 0.2 }, { type: 'triangle', freq: 110, gain: 0.05 }],
-      // Era 2: Big Bang — white noise burst + bass
-      [{ type: 'noise', gain: 0.15 }, { type: 'sine', freq: 40, gain: 0.3 }],
-      // Era 3: Stars — high ambient shimmer
-      [{ type: 'sine', freq: 220, gain: 0.06 }, { type: 'sine', freq: 330, gain: 0.04 }, { type: 'triangle', freq: 440, gain: 0.02 }],
-      // Era 4: Solar System — low drone + crackle
-      [{ type: 'sawtooth', freq: 30, gain: 0.08 }, { type: 'noise', gain: 0.04 }],
-      // Era 5: Earth — ocean waves (filtered noise)
-      [{ type: 'noise', gain: 0.08, filter: { type: 'lowpass', freq: 400 } }, { type: 'sine', freq: 88, gain: 0.04 }],
-      // Era 6: Life — organic bubbles (sine cluster)
-      [{ type: 'sine', freq: 200, gain: 0.04 }, { type: 'sine', freq: 251, gain: 0.03 }, { type: 'sine', freq: 300, gain: 0.02 }],
-      // Era 7: Cambrian — rain (filtered noise) + insects
-      [{ type: 'noise', gain: 0.06, filter: { type: 'highpass', freq: 2000 } }, { type: 'triangle', freq: 600, gain: 0.02 }],
-      // Era 8: Dinosaurs — low growl
-      [{ type: 'sawtooth', freq: 40, gain: 0.06 }, { type: 'sine', freq: 60, gain: 0.08 }],
-      // Era 9: Humans — electronic hum
-      [{ type: 'square', freq: 55, gain: 0.04 }, { type: 'sine', freq: 110, gain: 0.03 }, { type: 'noise', gain: 0.02 }],
-      // Era 10: Future — ethereal pad
-      [{ type: 'sine', freq: 174, gain: 0.06 }, { type: 'sine', freq: 261, gain: 0.04 }, { type: 'triangle', freq: 349, gain: 0.03 }],
+      // Era 0: Void — Deep rumbling Gargantua sub-bass
+      [
+        { type: 'sine', freq: 35, gain: 0.5, detune: 0 }, 
+        { type: 'sine', freq: 35.5, gain: 0.4, detune: 5 },
+        { type: 'triangle', freq: 70, gain: 0.1, filter: { type: 'lowpass', freq: 150 } }
+      ],
+      // Era 1: Singularity — Tension rising tone
+      [
+        { type: 'sine', freq: 45, gain: 0.4 }, 
+        { type: 'sawtooth', freq: 45, gain: 0.15, filter: { type: 'lowpass', freq: 200 } },
+        { type: 'sine', freq: 135, gain: 0.1, lfo: { freq: 0.2, depth: 5 } } // Eerie throb
+      ],
+      // Era 2: Big Bang — White noise explosion + massive bass drop
+      [
+        { type: 'noise', gain: 0.2, filter: { type: 'lowpass', freq: 800 } }, 
+        { type: 'square', freq: 40, gain: 0.3, filter: { type: 'lowpass', freq: 100 } }
+      ],
+      // Era 3: Stars — High ambient Zimmer string shimmer
+      [
+        { type: 'sine', freq: 220, gain: 0.08 }, 
+        { type: 'sine', freq: 222, gain: 0.08 }, 
+        { type: 'triangle', freq: 440, gain: 0.04, filter: { type: 'lowpass', freq: 1000 } }
+      ],
+      // Era 4: Solar System — Low drone
+      [
+        { type: 'sawtooth', freq: 32.7, gain: 0.1, filter: { type: 'lowpass', freq: 200 } }, 
+        { type: 'noise', gain: 0.02 }
+      ],
+      // Era 5: Earth — Ocean waves + pure tone
+      [
+        { type: 'noise', gain: 0.1, filter: { type: 'lowpass', freq: 300 }, lfo: { freq: 0.1, depth: 100 } }, 
+        { type: 'sine', freq: 110, gain: 0.05 }
+      ],
+      // Era 6: Life — Organic bubbling
+      [
+        { type: 'sine', freq: 196, gain: 0.05 }, 
+        { type: 'sine', freq: 247, gain: 0.04 }, 
+        { type: 'triangle', freq: 294, gain: 0.03, lfo: { freq: 1.5, depth: 10 } }
+      ],
+      // Era 7: Cambrian — Higher frequencies
+      [
+        { type: 'noise', gain: 0.04, filter: { type: 'highpass', freq: 1500 } }, 
+        { type: 'triangle', freq: 523, gain: 0.03 }
+      ],
+      // Era 8: Dinosaurs — Low growl
+      [
+        { type: 'sawtooth', freq: 41, gain: 0.1, filter: { type: 'lowpass', freq: 150 } }, 
+        { type: 'sine', freq: 61, gain: 0.1, lfo: { freq: 4, depth: 3 } } // Fast vibrato for growl
+      ],
+      // Era 9: Humans — Electronic hum
+      [
+        { type: 'square', freq: 55, gain: 0.05, filter: { type: 'lowpass', freq: 400 } }, 
+        { type: 'sine', freq: 165, gain: 0.04 }
+      ],
+      // Era 10: Future — Ethereal pad
+      [
+        { type: 'sine', freq: 174.6, gain: 0.06 }, 
+        { type: 'sine', freq: 261.6, gain: 0.05 }, 
+        { type: 'triangle', freq: 349.2, gain: 0.04, filter: { type: 'lowpass', freq: 800 } }
+      ],
+      // Era 11: Unknown World — Surreal alien harmonics
+      [
+        { type: 'sine', freq: 130.8, gain: 0.06 }, 
+        { type: 'triangle', freq: 196, gain: 0.05, filter: { type: 'lowpass', freq: 500 } },
+        { type: 'sine', freq: 293.6, gain: 0.04, lfo: { freq: 0.1, depth: 5 } }
+      ],
     ];
 
     const config = configs[index] || [];
     config.forEach(c => this._playTone(c));
   }
 
-  _playTone({ type, freq, gain: gainVal, filter }) {
+  _playTone({ type, freq, gain: gainVal, filter, lfo, detune }) {
     if (!this.ctx) return;
     try {
       let source;
       if (type === 'noise') {
-        // White noise via AudioBuffer
         const bufferSize = this.ctx.sampleRate * 2;
         const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
         const data = buffer.getChannelData(0);
@@ -91,28 +144,41 @@ export class AudioEngine {
         source = this.ctx.createOscillator();
         source.type = type;
         source.frequency.value = freq;
+        if (detune) source.detune.value = detune;
       }
 
       const gainNode = this.ctx.createGain();
       gainNode.gain.value = 0;
 
-      let node = source;
+      let nodeToConnect = source;
 
+      // Add LFO for wobble/vibrato if specified
+      if (lfo && type !== 'noise') {
+        const lfoOsc = this.ctx.createOscillator();
+        lfoOsc.type = 'sine';
+        lfoOsc.frequency.value = lfo.freq;
+        const lfoGain = this.ctx.createGain();
+        lfoGain.gain.value = lfo.depth;
+        lfoOsc.connect(lfoGain);
+        lfoGain.connect(source.frequency);
+        lfoOsc.start();
+      }
+
+      // Add Filter
       if (filter) {
         const filterNode = this.ctx.createBiquadFilter();
         filterNode.type = filter.type;
         filterNode.frequency.value = filter.freq;
-        source.connect(filterNode);
-        filterNode.connect(gainNode);
-      } else {
-        source.connect(gainNode);
+        nodeToConnect.connect(filterNode);
+        nodeToConnect = filterNode;
       }
 
+      nodeToConnect.connect(gainNode);
       gainNode.connect(this.masterGain);
       source.start();
 
-      // Fade in
-      gainNode.gain.setTargetAtTime(gainVal, this.ctx.currentTime, 1.0);
+      // Long cinematic fade in
+      gainNode.gain.setTargetAtTime(gainVal, this.ctx.currentTime, 2.0);
 
       this._nodes.push({ source, gain: gainNode });
     } catch(e) {

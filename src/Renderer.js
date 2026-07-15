@@ -44,7 +44,7 @@ export class Renderer {
       type: THREE.HalfFloatType,
     };
 
-    this.mainTarget = new THREE.WebGLRenderTarget(w * 1.5, h * 1.5, opts);  // supersampled
+    this.mainTarget = new THREE.WebGLRenderTarget(w, h, opts);  // removed 1.5x supersample for performance
     this.glowTarget = new THREE.WebGLRenderTarget(w * 0.5, h * 0.5, opts);  // half-res bloom
     
     // Low-res target for gravitational lensing distortion vector field
@@ -132,7 +132,7 @@ export class Renderer {
 
     const w = sizes.width  * sizes.pixelRatio;
     const h = sizes.height * sizes.pixelRatio;
-    this.mainTarget.setSize(w * 1.5, h * 1.5);
+    this.mainTarget.setSize(w, h);
     this.glowTarget.setSize(w * 0.5, h * 0.5);
   }
 
