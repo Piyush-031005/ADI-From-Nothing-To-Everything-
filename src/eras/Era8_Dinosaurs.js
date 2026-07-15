@@ -1,9 +1,9 @@
 import * as THREE from 'three';
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * Era 8 — DINOSAURS
- * Cinematic Volumetric Asteroid Impact.
- * Features a heavily displaced, magma-filled asteroid core and a fiery particle trail.
+ * Cinematic Volumetric Asteroid Impact + Multiple Premium 3D Models.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
@@ -13,8 +13,67 @@ export class Era8_Dinosaurs {
     this.group.visible = false;
     this.exp.scene.add(this.group);
     
+    this.mixers = [];
+    this.clock = new THREE.Clock();
+
     this._buildTerrain();
     this._buildAsteroid();
+    this._loadModels();
+  }
+
+  _loadModels() {
+    const loader = new GLTFLoader();
+
+    // 1. Land Dinosaur (T-Rex)
+    loader.load('/models/dinosaurs/rampaging_tyrannosaurus_rex.glb', (gltf) => {
+      this.trex = gltf.scene;
+      
+      // We will place the T-Rex in the foreground looking at the meteor
+      this.trex.position.set(10, -15, 10);
+      this.trex.rotation.y = -Math.PI / 4; 
+      // Scale might be huge or tiny depending on the model, setting to 0.05 as safe default for large models
+      this.trex.scale.set(0.02, 0.02, 0.02); 
+      
+      // Fix lighting materials if they are too dark
+      this.trex.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.envMapIntensity = 1.0;
+        }
+      });
+
+      this.group.add(this.trex);
+      
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.trex);
+        // Play the first animation (usually run/roar)
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    }, undefined, (e) => console.error("Error loading TRex", e));
+
+    // 2. Flying Dinosaur (Pterodactyl)
+    loader.load('/models/dinosaurs/Pteradactal.glb', (gltf) => {
+      this.ptero = gltf.scene;
+      
+      this.ptero.position.set(-15, 20, 0);
+      this.ptero.rotation.y = Math.PI / 2;
+      this.ptero.scale.set(0.01, 0.01, 0.01); 
+
+      this.group.add(this.ptero);
+      
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.ptero);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    }, undefined, (e) => console.error("Error loading Ptero", e));
+    
+    // Ambient Light to illuminate models
+    const ambient = new THREE.AmbientLight(0x404040, 5.0); // Soft white light
+    this.group.add(ambient);
+    const dirLight = new THREE.DirectionalLight(0xffaa55, 3.0);
+    dirLight.position.set(-50, 100, 50);
+    this.group.add(dirLight);
   }
 
   _buildTerrain() {
@@ -198,14 +257,13 @@ export class Era8_Dinosaurs {
     
     // Soft, fiery cinematic particle trail
     const tGeo = new THREE.BufferGeometry();
-    const count = 3000; // Optimized count
+    const count = 3000;
     const pos = new Float32Array(count * 3);
     for(let i=0; i<count; i++) {
-      // Cylinder-like distribution trailing upwards (since it faces -Y during fall)
       const r = Math.random() * 5;
       const angle = Math.random() * Math.PI * 2;
       pos[i*3] = Math.cos(angle) * r;
-      pos[i*3+1] = Math.random() * 80; // Trail length
+      pos[i*3+1] = Math.random() * 80;
       pos[i*3+2] = Math.sin(angle) * r;
     }
     tGeo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -218,7 +276,6 @@ export class Era8_Dinosaurs {
         void main() {
           vec3 p = position;
           vY = p.y;
-          // Fire turbulence
           p.x += sin(p.y * 0.1 + time * 10.0) * (p.y * 0.05);
           p.z += cos(p.y * 0.1 + time * 10.0) * (p.y * 0.05);
           
@@ -231,7 +288,6 @@ export class Era8_Dinosaurs {
         uniform float opacity;
         varying float vY;
         void main() {
-          // Soft radial glow for fire particles
           float dist = distance(gl_PointCoord, vec2(0.5));
           float strength = 0.05 / dist - 0.1;
           if (strength < 0.0) discard;
@@ -271,11 +327,11 @@ export class Era8_Dinosaurs {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 15, 40),
-      new THREE.Vector3(-25, 12, 15),
-      new THREE.Vector3(-15, 5, 0),
-      new THREE.Vector3(0, 4, -15),
+      new THREE.Vector3(0, 5, 40),
+      new THREE.Vector3(-15, 0, 15),
+      new THREE.Vector3(15, -5, -5),
     ]);
+    // The camera will pan around the TRex looking towards the meteor impact
     return { curve, lookAt: new THREE.Vector3(0, -15, 0) };
   }
 
@@ -317,6 +373,12 @@ export class Era8_Dinosaurs {
 
   update(time) {
     if (!this.visible) return;
+    const delta = this.clock.getDelta();
+
+    // Update animations
+    this.mixers.forEach(mixer => mixer.update(delta));
+
+    // Update shaders
     this.terrainMat.uniforms.time.value = time;
     this.asteroidMat.uniforms.time.value = time;
     this.meteorTrail.material.uniforms.time.value = time;
@@ -325,5 +387,12 @@ export class Era8_Dinosaurs {
     this.meteorCore.rotation.x = time * 3;
     this.meteorCore.rotation.y = time * 2;
     this.meteorCore.rotation.z = time * 1.5;
+
+    // Make the Pterodactyl fly in a circle
+    if (this.ptero) {
+      this.ptero.position.x = Math.sin(time) * 40;
+      this.ptero.position.z = Math.cos(time) * 40;
+      this.ptero.rotation.y = time + Math.PI; // Face direction of flight
+    }
   }
 }
