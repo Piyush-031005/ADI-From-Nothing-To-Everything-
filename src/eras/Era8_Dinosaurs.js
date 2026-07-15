@@ -3,7 +3,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * Era 8 — DINOSAURS
- * Cinematic Volumetric Asteroid Impact + Multiple Premium 3D Models with Auto-Scaling.
+ * Optimized for performance: Loads only T-Rex and Pterodactyl.
+ * Camera heavily zoomed in. Forced emissive lighting for visibility.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
@@ -21,7 +22,6 @@ export class Era8_Dinosaurs {
     this._loadModels();
   }
 
-  // Auto-scaler ensures models of any size fit perfectly into the scene
   _autoScale(model, targetSize, keepBottomAtZero = true) {
     const box = new THREE.Box3().setFromObject(model);
     const size = box.getSize(new THREE.Vector3());
@@ -33,7 +33,6 @@ export class Era8_Dinosaurs {
     model.scale.setScalar(scale);
     
     if (keepBottomAtZero) {
-      // Re-calculate box after scaling to offset Y so it stands on the ground
       const newBox = new THREE.Box3().setFromObject(model);
       const bottomY = newBox.min.y;
       model.position.y -= bottomY; 
@@ -48,11 +47,11 @@ export class Era8_Dinosaurs {
       this.trex = gltf.scene;
       this.group.add(this.trex);
       
-      this._autoScale(this.trex, 15); // Make it 15 units big
-      this.trex.position.set(10, -15, 10);
+      this._autoScale(this.trex, 18); // Massive size
+      this.trex.position.set(5, -15, 5); // Moved closer to center
       this.trex.rotation.y = -Math.PI / 4; 
       
-      this._fixMaterials(this.trex);
+      this._forceVisibility(this.trex);
 
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.trex);
@@ -61,50 +60,16 @@ export class Era8_Dinosaurs {
       }
     });
 
-    // 2. Triceratops (Midground)
-    loader.load('/models/dinosaurs/triceratops_animated.glb', (gltf) => {
-      this.tricera = gltf.scene;
-      this.group.add(this.tricera);
-      
-      this._autoScale(this.tricera, 10); 
-      this.tricera.position.set(-10, -15, 0);
-      this.tricera.rotation.y = Math.PI / 6;
-      
-      this._fixMaterials(this.tricera);
-
-      if (gltf.animations.length > 0) {
-        const mixer = new THREE.AnimationMixer(this.tricera);
-        mixer.clipAction(gltf.animations[0]).play();
-        this.mixers.push(mixer);
-      }
-    });
-
-    // 3. Brontosaurus (Background)
-    loader.load('/models/dinosaurs/brontosaurus_animated.glb', (gltf) => {
-      this.bronto = gltf.scene;
-      this.group.add(this.bronto);
-      
-      this._autoScale(this.bronto, 25); // Massive background neck
-      this.bronto.position.set(-25, -15, -20);
-      this.bronto.rotation.y = Math.PI / 2;
-      
-      this._fixMaterials(this.bronto);
-
-      if (gltf.animations.length > 0) {
-        const mixer = new THREE.AnimationMixer(this.bronto);
-        mixer.clipAction(gltf.animations[0]).play();
-        this.mixers.push(mixer);
-      }
-    });
-
-    // 4. Pterodactyl (Sky)
+    // 2. Pterodactyl (Sky)
     loader.load('/models/dinosaurs/Pteradactal.glb', (gltf) => {
       this.ptero = gltf.scene;
       this.group.add(this.ptero);
       
-      this._autoScale(this.ptero, 8, false); // No ground snapping
-      this.ptero.position.set(0, 10, -10);
+      this._autoScale(this.ptero, 12, false); 
+      this.ptero.position.set(0, 15, -10);
       
+      this._forceVisibility(this.ptero);
+
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.ptero);
         mixer.clipAction(gltf.animations[0]).play();
@@ -112,28 +77,42 @@ export class Era8_Dinosaurs {
       }
     });
     
-    // Strong Lighting for PBR Dinosaur Models
-    const hemiLight = new THREE.HemisphereLight(0xffddaa, 0x444444, 2.0);
+    // EXTREME LIGHTING
+    const ambient = new THREE.AmbientLight(0xffffff, 10.0); // Blast everything with white light
+    this.group.add(ambient);
+    
+    const hemiLight = new THREE.HemisphereLight(0xffddaa, 0x444444, 5.0);
     hemiLight.position.set(0, 200, 0);
     this.group.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffaa55, 4.0);
+    const dirLight = new THREE.DirectionalLight(0xffaa55, 10.0);
     dirLight.position.set(-100, 200, 100);
     this.group.add(dirLight);
   }
 
-  _fixMaterials(model) {
+  // Force materials to be bright and emissive to prevent pitch-black bug
+  _forceVisibility(model) {
     model.traverse((child) => {
       if (child.isMesh && child.material) {
-        child.material.envMapIntensity = 1.0;
-        // Fix for sometimes transparent dark materials
+        // Backup original color if needed, but force it to be bright
+        child.material.envMapIntensity = 2.0;
         child.material.depthWrite = true;
+        child.material.roughness = 0.8;
+        child.material.metalness = 0.1;
+        
+        // Add a strong ambient emissive glow so it's impossible to be dark
+        if (!child.material.emissive) {
+          child.material.emissive = new THREE.Color(0x333333);
+        } else {
+          child.material.emissive.add(new THREE.Color(0x222222));
+        }
+        child.material.needsUpdate = true;
       }
     });
   }
 
   _buildTerrain() {
-    const geo = new THREE.PlaneGeometry(300, 300, 256, 256);
+    const geo = new THREE.PlaneGeometry(300, 300, 128, 128); // Reduced poly count to save lag
     geo.rotateX(-Math.PI * 0.5);
     
     this.terrainMat = new THREE.ShaderMaterial({
@@ -220,7 +199,7 @@ export class Era8_Dinosaurs {
 
   _buildAsteroid() {
     this.asteroidGroup = new THREE.Group();
-    const coreGeo = new THREE.SphereGeometry(6, 128, 128);
+    const coreGeo = new THREE.SphereGeometry(6, 64, 64); // Reduced poly count
     this.asteroidMat = new THREE.ShaderMaterial({
       uniforms: { time: { value: 0 } },
       vertexShader: `
@@ -297,7 +276,7 @@ export class Era8_Dinosaurs {
     this.asteroidGroup.add(this.meteorCore);
     
     const tGeo = new THREE.BufferGeometry();
-    const count = 3000;
+    const count = 1000; // Reduced particles to save lag
     const pos = new Float32Array(count * 3);
     for(let i=0; i<count; i++) {
       const r = Math.random() * 5;
@@ -363,12 +342,13 @@ export class Era8_Dinosaurs {
   }
 
   getCameraPath() {
+    // Zoomed deeply into the T-Rex (which is at 5, -15, 5)
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 15, 50),
-      new THREE.Vector3(-25, 5, 20),
-      new THREE.Vector3(15, -5, 0),
+      new THREE.Vector3(5, -5, 40),    // Start wide
+      new THREE.Vector3(5, -10, 20),   // Zoom in extremely close to its face
+      new THREE.Vector3(-10, -12, 10), // Pan around it
     ]);
-    return { curve, lookAt: new THREE.Vector3(0, -15, -20) };
+    return { curve, lookAt: new THREE.Vector3(5, -10, 5) }; // Staring right at it
   }
 
   show(duration = 1.0) {
@@ -406,7 +386,7 @@ export class Era8_Dinosaurs {
   }
 
   update(time) {
-    if (!this.visible) return;
+    if (!this.visible) return; // Prevent lag by skipping updates when hidden
     const delta = this.clock.getDelta();
 
     this.mixers.forEach(mixer => mixer.update(delta));

@@ -16,7 +16,6 @@ import { Era5_Earth }      from './Era5_Earth.js';
 import { Era6_Life }       from './Era6_Life.js';
 import { Era7_Cambrian }   from './Era7_Cambrian.js';
 import { Era8_Dinosaurs }  from './Era8_Dinosaurs.js';
-import { Era9_Humans }     from './Era9_Humans.js';
 import { Era10_Future }    from './Era10_Future.js';
 import { Era11_Unknown }   from './Era11_Unknown.js';
 
@@ -31,9 +30,8 @@ export const ERA_DATA = [
   { index: 7,  name: 'FIRST LIFE',      sub: 'From the ocean. A single cell awakens.',year: '3.8 BYA',    color: '#4ade80' },
   { index: 8,  name: 'CAMBRIAN',        sub: 'Life explodes into complexity.',        year: '540 MYA',    color: '#86efac' },
   { index: 9,  name: 'DINOSAURS',       sub: 'Giants rule. Until fire falls from sky.',year: '230 MYA',   color: '#fbbf24' },
-  { index: 10, name: 'HUMANS',          sub: 'Curiosity. Fire. Cities. Stars.',       year: '300,000 YA', color: '#f0abfc' },
-  { index: 11, name: 'FUTURE',          sub: 'Technology and evolution merge.',       year: 'Tomorrow',   color: '#a855f7' },
-  { index: 12, name: 'UNKNOWN WORLD',   sub: 'Evolution never ended. You\'re standing on its latest chapter.', year: '∞ Ahead', color: '#00ffff' },
+  { index: 10, name: 'FUTURE',          sub: 'Technology and evolution merge.',       year: 'Tomorrow',   color: '#a855f7' },
+  { index: 11, name: 'UNKNOWN WORLD',   sub: 'Evolution never ended. You\'re standing on its latest chapter.', year: '∞ Ahead', color: '#00ffff' },
 ];
 
 /**
@@ -64,7 +62,6 @@ export class EraDirector {
       new Era6_Life(experience),
       new Era7_Cambrian(experience),
       new Era8_Dinosaurs(experience),
-      new Era9_Humans(experience),
       new Era10_Future(experience),
       new Era11_Unknown(experience),
     ];
@@ -126,7 +123,7 @@ export class EraDirector {
     // Final message
     const finalMsg = document.getElementById('final-message');
     if (finalMsg) {
-      finalMsg.classList.toggle('visible', index === 10);
+      finalMsg.classList.toggle('visible', index === 11);
     }
   }
 

@@ -23,7 +23,7 @@ export class AudioEngine {
       6: '/music/rise of soalr system and earth.mp3?v=2',
       7: '/music/camprian perod.mp3?v=2',
       8: '/music/dinosaur.mp3?v=2',
-      9: '/music/human.mp3?v=2',
+      9: '/music/dinosaur.mp3?v=2', // Dinosaurs takes up index 9 in new ERA_DATA mapping
       10: '/music/cyberpunk future.mp3?v=2',
       11: '/music/unknown last era.mp3?v=2'
     };

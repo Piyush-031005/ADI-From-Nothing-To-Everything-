@@ -129,17 +129,21 @@ body, html {
   opacity: 0; /* JS controls fade */
 }
 #era-title {
-  font-family: var(--font-serif);
-  font-style: italic;
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 5rem;
   font-weight: 300;
-  font-size: 4rem;
-  letter-spacing: 0.1em;
-  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 12px;
+  margin-bottom: 20px;
+  line-height: 1;
 }
 #era-subtitle {
+  font-family: 'Inter', sans-serif;
   font-size: 0.9rem;
-  letter-spacing: 0.1em;
-  color: var(--color-muted);
+  font-weight: 300;
+  text-transform: uppercase;
+  letter-spacing: 5px;
+  color: rgba(255, 255, 255, 0.7);
 }
 
 /* Scroll Hint - Bottom Right */
