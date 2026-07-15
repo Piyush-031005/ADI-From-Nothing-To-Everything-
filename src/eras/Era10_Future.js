@@ -114,29 +114,34 @@ export class Era10_Future {
       }
     });
     
-    // Cyberpunk Lighting
-    const ambient = new THREE.AmbientLight(0xffaaee, 2.0); // Pink/Purple ambient
-    this.group.add(ambient);
+    // Cyberpunk Lighting Setup (Stronger for PBR Models)
+    const hemiLight = new THREE.HemisphereLight(0xffaaee, 0x002244, 3.0);
+    hemiLight.position.set(0, 200, 0);
+    this.group.add(hemiLight);
+
+    const mainLight = new THREE.DirectionalLight(0xffffff, 4.0);
+    mainLight.position.set(100, 200, 100);
+    this.group.add(mainLight);
     
-    const blueSpot = new THREE.SpotLight(0x00aaff, 50.0);
-    blueSpot.position.set(50, 50, 50);
+    const blueSpot = new THREE.SpotLight(0x00aaff, 100.0, 500, Math.PI/4, 0.5, 1);
+    blueSpot.position.set(50, 150, 50);
     blueSpot.lookAt(0,0,0);
     this.group.add(blueSpot);
 
-    const pinkSpot = new THREE.SpotLight(0xff00ff, 50.0);
-    pinkSpot.position.set(-50, 50, -50);
+    const pinkSpot = new THREE.SpotLight(0xff00ff, 100.0, 500, Math.PI/4, 0.5, 1);
+    pinkSpot.position.set(-50, 150, -50);
     pinkSpot.lookAt(0,0,0);
     this.group.add(pinkSpot);
   }
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 20, 80),   
-      new THREE.Vector3(-20, 5, 30),  
-      new THREE.Vector3(10, 5, 0),    
-      new THREE.Vector3(0, 10, -30),  
+      new THREE.Vector3(0, 40, 120),   
+      new THREE.Vector3(-30, 20, 60),  
+      new THREE.Vector3(15, 10, 20),    
+      new THREE.Vector3(0, 15, -10),  
     ]);
-    return { curve, lookAt: new THREE.Vector3(0, 5, -50) };
+    return { curve, lookAt: new THREE.Vector3(0, 10, -50) };
   }
 
   show(duration = 1.0) {

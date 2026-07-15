@@ -112,10 +112,13 @@ export class Era8_Dinosaurs {
       }
     });
     
-    const ambient = new THREE.AmbientLight(0x404040, 5.0); 
-    this.group.add(ambient);
-    const dirLight = new THREE.DirectionalLight(0xffaa55, 3.0);
-    dirLight.position.set(-50, 100, 50);
+    // Strong Lighting for PBR Dinosaur Models
+    const hemiLight = new THREE.HemisphereLight(0xffddaa, 0x444444, 2.0);
+    hemiLight.position.set(0, 200, 0);
+    this.group.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffaa55, 4.0);
+    dirLight.position.set(-100, 200, 100);
     this.group.add(dirLight);
   }
 

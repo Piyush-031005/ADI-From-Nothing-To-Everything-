@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 import { EventBus, EVENTS } from '../utils/EventBus.js';
-import { AudioEngine } from '../audio/AudioEngine.js';
+import { audioEngine } from '../audio/AudioEngine.js';
 import { Timeline } from '../ui/Timeline.js';
 import { EraTitle } from '../ui/EraTitle.js';
 import { YearCounter } from '../ui/YearCounter.js';
@@ -50,7 +50,7 @@ export class EraDirector {
     this.timeline = new Timeline(ERA_DATA);
     this.eraTitle = new EraTitle();
     this.yearCounter = new YearCounter();
-    this.audio = new AudioEngine();
+    this.audio = audioEngine;
 
     // Build all eras
     this.eras = [

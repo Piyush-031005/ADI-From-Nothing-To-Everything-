@@ -42,11 +42,14 @@ export class AudioEngine {
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     this.ctx = new AudioContext();
     
+    // Immediately resume the context
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume();
+    }
+    
     this.masterGain = this.ctx.createGain();
-    // Reduce from 3.5x to 1.5x to prevent harsh digital clipping
     this.masterGain.gain.value = 1.5; 
     
-    // Use a compressor to cleanly boost perceived loudness without distortion
     this.compressor = this.ctx.createDynamicsCompressor();
     this.compressor.threshold.setValueAtTime(-15, this.ctx.currentTime);
     this.compressor.knee.setValueAtTime(10, this.ctx.currentTime);
@@ -140,3 +143,5 @@ export class AudioEngine {
     });
   }
 }
+
+export const audioEngine = new AudioEngine();
