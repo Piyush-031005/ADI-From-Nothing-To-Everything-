@@ -3,7 +3,7 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * Era 8 — DINOSAURS
- * Cinematic Volumetric Asteroid Impact + Multiple Premium 3D Models.
+ * Cinematic Volumetric Asteroid Impact + Multiple Premium 3D Models with Auto-Scaling.
  */
 export class Era8_Dinosaurs {
   constructor(experience) {
@@ -21,59 +21,112 @@ export class Era8_Dinosaurs {
     this._loadModels();
   }
 
+  // Auto-scaler ensures models of any size fit perfectly into the scene
+  _autoScale(model, targetSize, keepBottomAtZero = true) {
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    if (maxDim === 0) return;
+    
+    const scale = targetSize / maxDim;
+    model.scale.setScalar(scale);
+    
+    if (keepBottomAtZero) {
+      // Re-calculate box after scaling to offset Y so it stands on the ground
+      const newBox = new THREE.Box3().setFromObject(model);
+      const bottomY = newBox.min.y;
+      model.position.y -= bottomY; 
+    }
+  }
+
   _loadModels() {
     const loader = new GLTFLoader();
 
-    // 1. Land Dinosaur (T-Rex)
+    // 1. T-Rex (Foreground)
     loader.load('/models/dinosaurs/rampaging_tyrannosaurus_rex.glb', (gltf) => {
       this.trex = gltf.scene;
-      
-      // We will place the T-Rex in the foreground looking at the meteor
-      this.trex.position.set(10, -15, 10);
-      this.trex.rotation.y = -Math.PI / 4; 
-      // Scale might be huge or tiny depending on the model, setting to 0.05 as safe default for large models
-      this.trex.scale.set(0.02, 0.02, 0.02); 
-      
-      // Fix lighting materials if they are too dark
-      this.trex.traverse((child) => {
-        if (child.isMesh && child.material) {
-          child.material.envMapIntensity = 1.0;
-        }
-      });
-
       this.group.add(this.trex);
       
+      this._autoScale(this.trex, 15); // Make it 15 units big
+      this.trex.position.set(10, -15, 10);
+      this.trex.rotation.y = -Math.PI / 4; 
+      
+      this._fixMaterials(this.trex);
+
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.trex);
-        // Play the first animation (usually run/roar)
         mixer.clipAction(gltf.animations[0]).play();
         this.mixers.push(mixer);
       }
-    }, undefined, (e) => console.error("Error loading TRex", e));
+    });
 
-    // 2. Flying Dinosaur (Pterodactyl)
+    // 2. Triceratops (Midground)
+    loader.load('/models/dinosaurs/triceratops_animated.glb', (gltf) => {
+      this.tricera = gltf.scene;
+      this.group.add(this.tricera);
+      
+      this._autoScale(this.tricera, 10); 
+      this.tricera.position.set(-10, -15, 0);
+      this.tricera.rotation.y = Math.PI / 6;
+      
+      this._fixMaterials(this.tricera);
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.tricera);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
+
+    // 3. Brontosaurus (Background)
+    loader.load('/models/dinosaurs/brontosaurus_animated.glb', (gltf) => {
+      this.bronto = gltf.scene;
+      this.group.add(this.bronto);
+      
+      this._autoScale(this.bronto, 25); // Massive background neck
+      this.bronto.position.set(-25, -15, -20);
+      this.bronto.rotation.y = Math.PI / 2;
+      
+      this._fixMaterials(this.bronto);
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.bronto);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
+
+    // 4. Pterodactyl (Sky)
     loader.load('/models/dinosaurs/Pteradactal.glb', (gltf) => {
       this.ptero = gltf.scene;
-      
-      this.ptero.position.set(-15, 20, 0);
-      this.ptero.rotation.y = Math.PI / 2;
-      this.ptero.scale.set(0.01, 0.01, 0.01); 
-
       this.group.add(this.ptero);
+      
+      this._autoScale(this.ptero, 8, false); // No ground snapping
+      this.ptero.position.set(0, 10, -10);
       
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.ptero);
         mixer.clipAction(gltf.animations[0]).play();
         this.mixers.push(mixer);
       }
-    }, undefined, (e) => console.error("Error loading Ptero", e));
+    });
     
-    // Ambient Light to illuminate models
-    const ambient = new THREE.AmbientLight(0x404040, 5.0); // Soft white light
+    const ambient = new THREE.AmbientLight(0x404040, 5.0); 
     this.group.add(ambient);
     const dirLight = new THREE.DirectionalLight(0xffaa55, 3.0);
     dirLight.position.set(-50, 100, 50);
     this.group.add(dirLight);
+  }
+
+  _fixMaterials(model) {
+    model.traverse((child) => {
+      if (child.isMesh && child.material) {
+        child.material.envMapIntensity = 1.0;
+        // Fix for sometimes transparent dark materials
+        child.material.depthWrite = true;
+      }
+    });
   }
 
   _buildTerrain() {
@@ -118,10 +171,8 @@ export class Era8_Dinosaurs {
 
         void main() {
           vec3 pos = position;
-          // Pre-impact terrain (jungles/mountains represented abstractly)
           float h = snoise(pos.xz * 0.03) * 8.0 + snoise(pos.xz * 0.1) * 2.0;
           
-          // Impact crater
           float dist = length(pos.xz);
           float crater = smoothstep(50.0, 0.0, dist) * -20.0;
           float rim = smoothstep(70.0, 40.0, dist) * smoothstep(10.0, 40.0, dist) * 15.0;
@@ -140,19 +191,17 @@ export class Era8_Dinosaurs {
         varying float vHeight;
         
         void main() {
-          vec3 preImpact = vec3(0.02, 0.05, 0.01); // Dark green/brown
-          vec3 scorched = vec3(0.01, 0.01, 0.01); // Ash
+          vec3 preImpact = vec3(0.02, 0.05, 0.01);
+          vec3 scorched = vec3(0.01, 0.01, 0.01); 
           vec3 magma = vec3(1.0, 0.3, 0.0);
           
           vec3 baseColor = mix(preImpact, scorched, uImpact);
           
-          // Glowing magma inside the crater
           float magmaGlow = smoothstep(0.0, -15.0, vHeight);
           magmaGlow *= (0.8 + 0.2 * sin(time * 3.0 + vPos.x * 2.0));
           
           vec3 finalColor = mix(baseColor, magma, magmaGlow * uImpact);
           
-          // Atmospheric fog
           float dist = gl_FragCoord.z / gl_FragCoord.w;
           float fog = smoothstep(30.0, 150.0, dist);
           finalColor = mix(finalColor, vec3(0.0), fog);
@@ -168,20 +217,14 @@ export class Era8_Dinosaurs {
 
   _buildAsteroid() {
     this.asteroidGroup = new THREE.Group();
-    
-    // The Asteroid Core (High-poly displaced sphere)
     const coreGeo = new THREE.SphereGeometry(6, 128, 128);
-    
     this.asteroidMat = new THREE.ShaderMaterial({
-      uniforms: {
-        time: { value: 0 }
-      },
+      uniforms: { time: { value: 0 } },
       vertexShader: `
         uniform float time;
         varying vec2 vUv;
         varying float vNoise;
         
-        // Simplex 3D Noise for crater displacement
         vec3 mod289(vec3 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec4 mod289(vec4 x) { return x - floor(x * (1.0 / 289.0)) * 289.0; }
         vec4 permute(vec4 x) { return mod289(((x*34.0)+1.0)*x); }
@@ -227,7 +270,6 @@ export class Era8_Dinosaurs {
 
         void main() {
           vUv = uv;
-          // Rocky crater displacement
           float noise = snoise(position * 0.5 + time * 0.2);
           float largeNoise = snoise(position * 0.2) * 2.0;
           vNoise = noise + largeNoise;
@@ -239,15 +281,11 @@ export class Era8_Dinosaurs {
       fragmentShader: `
         varying vec2 vUv;
         varying float vNoise;
-        
         void main() {
-          vec3 rockColor = vec3(0.05, 0.05, 0.05); // Charred rock
-          vec3 magmaColor = vec3(1.0, 0.3, 0.0);   // Burning interior
-          
-          // Deep areas (low noise) are magma, high areas are rock
+          vec3 rockColor = vec3(0.05, 0.05, 0.05); 
+          vec3 magmaColor = vec3(1.0, 0.3, 0.0);   
           float magmaFactor = smoothstep(-1.0, -2.5, vNoise);
           vec3 finalColor = mix(rockColor, magmaColor, magmaFactor);
-          
           gl_FragColor = vec4(finalColor, 1.0);
         }
       `
@@ -255,7 +293,6 @@ export class Era8_Dinosaurs {
     this.meteorCore = new THREE.Mesh(coreGeo, this.asteroidMat);
     this.asteroidGroup.add(this.meteorCore);
     
-    // Soft, fiery cinematic particle trail
     const tGeo = new THREE.BufferGeometry();
     const count = 3000;
     const pos = new Float32Array(count * 3);
@@ -291,12 +328,10 @@ export class Era8_Dinosaurs {
           float dist = distance(gl_PointCoord, vec2(0.5));
           float strength = 0.05 / dist - 0.1;
           if (strength < 0.0) discard;
-          
           float alpha = smoothstep(80.0, 0.0, vY);
           vec3 fireCore = vec3(1.0, 1.0, 0.8);
           vec3 fireEdge = vec3(1.0, 0.1, 0.0);
           vec3 col = mix(fireEdge, fireCore, alpha * strength);
-          
           gl_FragColor = vec4(col, strength * alpha * opacity);
         }
       `,
@@ -311,7 +346,6 @@ export class Era8_Dinosaurs {
     this.asteroidGroup.lookAt(0, -15, 0);
     this.group.add(this.asteroidGroup);
 
-    // Blinding Impact Flash
     const flashGeo = new THREE.PlaneGeometry(300, 300);
     const flashMat = new THREE.MeshBasicMaterial({
       color: 0xffaa55,
@@ -327,12 +361,11 @@ export class Era8_Dinosaurs {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 5, 40),
-      new THREE.Vector3(-15, 0, 15),
-      new THREE.Vector3(15, -5, -5),
+      new THREE.Vector3(0, 15, 50),
+      new THREE.Vector3(-25, 5, 20),
+      new THREE.Vector3(15, -5, 0),
     ]);
-    // The camera will pan around the TRex looking towards the meteor impact
-    return { curve, lookAt: new THREE.Vector3(0, -15, 0) };
+    return { curve, lookAt: new THREE.Vector3(0, -15, -20) };
   }
 
   show(duration = 1.0) {
@@ -348,7 +381,7 @@ export class Era8_Dinosaurs {
   onScrollT(t) {
     if (t < 0.7) {
       const mt = t / 0.7;
-      const easeMt = Math.pow(mt, 2.5); // Fast, heavy impact curve
+      const easeMt = Math.pow(mt, 2.5);
       this.asteroidGroup.position.set(
         THREE.MathUtils.lerp(-150, 0, easeMt),
         THREE.MathUtils.lerp(150, -10, easeMt),
@@ -361,8 +394,6 @@ export class Era8_Dinosaurs {
       this.asteroidGroup.visible = false;
       const postT = (t - 0.7) / 0.3; 
       this.terrainMat.uniforms.uImpact.value = 1.0; 
-      
-      // Massive blinding flash that fades
       if (postT < 0.1) {
         this.flash.material.opacity = postT / 0.1; 
       } else {
@@ -375,24 +406,20 @@ export class Era8_Dinosaurs {
     if (!this.visible) return;
     const delta = this.clock.getDelta();
 
-    // Update animations
     this.mixers.forEach(mixer => mixer.update(delta));
 
-    // Update shaders
     this.terrainMat.uniforms.time.value = time;
     this.asteroidMat.uniforms.time.value = time;
     this.meteorTrail.material.uniforms.time.value = time;
     
-    // Violent tumbling
     this.meteorCore.rotation.x = time * 3;
     this.meteorCore.rotation.y = time * 2;
     this.meteorCore.rotation.z = time * 1.5;
 
-    // Make the Pterodactyl fly in a circle
     if (this.ptero) {
       this.ptero.position.x = Math.sin(time) * 40;
-      this.ptero.position.z = Math.cos(time) * 40;
-      this.ptero.rotation.y = time + Math.PI; // Face direction of flight
+      this.ptero.position.z = Math.cos(time) * 40 - 20;
+      this.ptero.rotation.y = time + Math.PI; 
     }
   }
 }

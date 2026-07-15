@@ -38,7 +38,7 @@ body, html {
 }
 #scroll-spacer {
   width: 100%;
-  height: 1200vh; /* 12 eras * 100vh */
+  height: 4800vh; /* Slowed down massively: 12 eras * 400vh */
 }
 
 /* --- CLEAN MINIMAL LOADER --- */

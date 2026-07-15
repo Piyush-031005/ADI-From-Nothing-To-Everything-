@@ -3,7 +3,8 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 /**
  * Era 10 — THE FUTURE
- * Ultra-premium Cyberpunk City using multiple 3D models.
+ * Cyberpunk Space Wheel (space_station_3.glb) + Hovercars + Robots.
+ * Uses Auto-Scaling to ensure all 3D assets fit the viewport.
  */
 export class Era10_Future {
   constructor(experience) {
@@ -16,63 +17,105 @@ export class Era10_Future {
     this.mixers = [];
     this.clock = new THREE.Clock();
 
-    // Remove the old procedural boxes and use the premium 3D models
     this._loadModels();
+  }
+
+  // Auto-scaler ensures models of any size fit perfectly into the scene
+  _autoScale(model, targetSize, keepBottomAtZero = true) {
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    const maxDim = Math.max(size.x, size.y, size.z);
+    
+    if (maxDim === 0) return;
+    
+    const scale = targetSize / maxDim;
+    model.scale.setScalar(scale);
+    
+    if (keepBottomAtZero) {
+      // Re-calculate box after scaling to offset Y so it stands on the ground
+      const newBox = new THREE.Box3().setFromObject(model);
+      const bottomY = newBox.min.y;
+      model.position.y -= bottomY; 
+    }
   }
 
   _loadModels() {
     const loader = new GLTFLoader();
 
-    // 1. Cyberpunk City Environment
-    loader.load('/models/future/cyberpunk_city_-_1.glb', (gltf) => {
+    // 1. Cyberpunk Wheel Environment (space_station_3.glb)
+    loader.load('/models/future/space_station_3.glb', (gltf) => {
       this.city = gltf.scene;
-      this.city.position.set(0, -30, -50);
-      this.city.scale.set(0.1, 0.1, 0.1); // Scale adjustment
+      this.group.add(this.city);
+
+      this._autoScale(this.city, 300, false); // Massive environment
+      this.city.position.set(0, -100, -150); 
       
-      // Enhance emissive materials in the city for the cyberpunk glow
       this.city.traverse((child) => {
         if (child.isMesh && child.material) {
           if (child.material.emissive) {
             child.material.emissiveIntensity = 2.0;
           }
+          child.material.envMapIntensity = 1.0;
+          child.material.depthWrite = true;
         }
       });
 
-      this.group.add(this.city);
-    }, undefined, (e) => console.error("Error loading City", e));
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.city);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
 
     // 2. Flying Hovercar
     loader.load('/models/future/free_cyberpunk_hovercar.glb', (gltf) => {
       this.car = gltf.scene;
-      this.car.position.set(0, 10, -20);
-      this.car.scale.set(0.05, 0.05, 0.05);
       this.group.add(this.car);
       
+      this._autoScale(this.car, 8, false); // 8 units big
+      this.car.position.set(0, 10, -30);
+      
+      this.car.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.envMapIntensity = 1.0;
+          child.material.depthWrite = true;
+        }
+      });
+
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.car);
         mixer.clipAction(gltf.animations[0]).play();
         this.mixers.push(mixer);
       }
-    }, undefined, (e) => console.error("Error loading Hovercar", e));
+    });
 
     // 3. Ground Robot
     loader.load('/models/future/biped_robot.glb', (gltf) => {
       this.robot = gltf.scene;
-      // Position robot on a platform or foreground
-      this.robot.position.set(-10, -10, 10);
-      this.robot.rotation.y = Math.PI / 4;
-      this.robot.scale.set(2.0, 2.0, 2.0); 
       this.group.add(this.robot);
       
+      // Auto-scale robot to be 15 units tall (perfect screen size)
+      this._autoScale(this.robot, 15);
+      
+      this.robot.position.set(-10, -15, 10);
+      this.robot.rotation.y = Math.PI / 4;
+      
+      this.robot.traverse((child) => {
+        if (child.isMesh && child.material) {
+          child.material.envMapIntensity = 1.0;
+          child.material.depthWrite = true;
+        }
+      });
+
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.robot);
         mixer.clipAction(gltf.animations[0]).play();
         this.mixers.push(mixer);
       }
-    }, undefined, (e) => console.error("Error loading Robot", e));
+    });
     
-    // Lighting for the city
-    const ambient = new THREE.AmbientLight(0xffaaee, 2.0); // Pink/Purple Cyberpunk ambient
+    // Cyberpunk Lighting
+    const ambient = new THREE.AmbientLight(0xffaaee, 2.0); // Pink/Purple ambient
     this.group.add(ambient);
     
     const blueSpot = new THREE.SpotLight(0x00aaff, 50.0);
@@ -88,10 +131,10 @@ export class Era10_Future {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, 20, 80),   // High overview
-      new THREE.Vector3(-20, 5, 30),  // Swoop down near robot
-      new THREE.Vector3(10, 5, 0),    // Fly past hovercar
-      new THREE.Vector3(0, 10, -30),  // Deep into city
+      new THREE.Vector3(0, 20, 80),   
+      new THREE.Vector3(-20, 5, 30),  
+      new THREE.Vector3(10, 5, 0),    
+      new THREE.Vector3(0, 10, -30),  
     ]);
     return { curve, lookAt: new THREE.Vector3(0, 5, -50) };
   }
@@ -107,31 +150,29 @@ export class Era10_Future {
   }
 
   onScrollT(t) {
-    // Optional
+    // Timeline logic
   }
 
   update(time) {
     if (!this.visible) return;
     const delta = this.clock.getDelta();
 
-    // Update animations
     this.mixers.forEach(mixer => mixer.update(delta));
 
-    // Animate Hovercar flying through the city
+    // Animate Hovercar flying
     if (this.car) {
-      this.car.position.x = Math.sin(time * 0.5) * 30;
-      this.car.position.z = Math.cos(time * 0.5) * 30 - 20;
-      this.car.position.y = 10 + Math.sin(time * 2.0) * 2.0; // Hover bobbing
+      this.car.position.x = Math.sin(time * 0.5) * 40;
+      this.car.position.z = Math.cos(time * 0.5) * 40 - 40;
+      this.car.position.y = 10 + Math.sin(time * 2.0) * 2.0; 
       
-      // Point car in direction of travel
-      const targetX = Math.sin((time + 0.1) * 0.5) * 30;
-      const targetZ = Math.cos((time + 0.1) * 0.5) * 30 - 20;
+      const targetX = Math.sin((time + 0.1) * 0.5) * 40;
+      const targetZ = Math.cos((time + 0.1) * 0.5) * 40 - 40;
       this.car.lookAt(targetX, this.car.position.y, targetZ);
     }
     
-    // Slow city rotation for cinematic feel
+    // Rotate massive wheel environment
     if (this.city) {
-      this.city.rotation.y = Math.sin(time * 0.1) * 0.2;
+      this.city.rotation.y = time * 0.02;
     }
   }
 }
