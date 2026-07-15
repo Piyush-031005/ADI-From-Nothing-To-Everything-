@@ -106,9 +106,11 @@ export class AudioEngine {
     this.activeTrackUrl = targetUrl;
     this.activeTrackObj = nextTrack;
 
-    // Special rule: Singularity starts exactly from 6 seconds
+    // Special track timings
     if (eraIndex === 1) {
       nextTrack.audio.currentTime = 6.0;
+    } else if (eraIndex === 2) {
+      nextTrack.audio.currentTime = 5.0;
     }
 
     // Ensure it's playing
