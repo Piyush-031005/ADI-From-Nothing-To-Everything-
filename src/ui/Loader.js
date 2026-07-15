@@ -1,59 +1,56 @@
-import { gsap } from 'gsap';
-
 /**
- * Loader — The entry screen.
- * Displays ĀDI singularity + title. Click to begin.
- * Collapses into a point before revealing the canvas.
+ * Loader — Handles the Interstellar-style cinematic intro sequence.
  */
 export class Loader {
   constructor(onComplete) {
-    this.el        = document.getElementById('loader');
-    this.hint      = document.getElementById('loader-hint');
-    this.scrollHint = document.getElementById('scroll-hint');
-    this._started  = false;
+    this.container = document.getElementById('loader');
+    this.hint = document.getElementById('loader-hint');
+    this.sequence = document.getElementById('loader-sequence');
+    this.textNodes = this.sequence ? this.sequence.querySelectorAll('p') : [];
+    
+    this.onComplete = onComplete;
+    this.clicked = false;
 
-    if (!this.el) { onComplete?.(); return; }
+    // Show initial hint to click
+    this.hint.style.opacity = '1';
 
-    this.el.addEventListener('click', () => {
-      if (this._started) return;
-      this._started = true;
-      this._collapse(onComplete);
+    this.container.addEventListener('click', () => {
+      if (this.clicked) return;
+      this.clicked = true;
+      
+      // Hide hint, start sequence
+      this.hint.style.opacity = '0';
+      this.startCinematicSequence();
     });
   }
 
-  _collapse(onComplete) {
-    const singularity = document.getElementById('loader-singularity');
-    const title       = document.getElementById('loader-title');
-    const sub         = document.getElementById('loader-sub');
-    const hint        = this.hint;
+  startCinematicSequence() {
+    let delay = 0;
+    
+    // Fade each sentence in and out sequentially
+    this.textNodes.forEach((node, index) => {
+      setTimeout(() => {
+        node.style.opacity = '1';
+        node.style.transform = 'translateY(0) scale(1)';
+      }, delay);
+      
+      delay += 3000; // Visible for 3 seconds
+      
+      setTimeout(() => {
+        node.style.opacity = '0';
+        node.style.transform = 'translateY(-10px) scale(0.98)';
+      }, delay);
+      
+      delay += 1000; // 1 second gap before next sentence
+    });
 
-    // Collapse sequence
-    const tl = gsap.timeline({ onComplete: () => {
-      this.el.classList.add('hidden');
-      setTimeout(onComplete, 1200);
-    }});
-
-    tl.to([title, sub, hint], { opacity: 0, duration: 0.4, stagger: 0.05, ease: 'power2.in' })
-      .to(singularity, {
-        scale: 40,
-        opacity: 0,
-        duration: 0.8,
-        ease: 'power4.in',
-      }, '-=0.2')
-      .to(this.el, { opacity: 0, duration: 0.4 }, '-=0.3');
-
-    // Show scroll hint after 2s
+    // After the sequence finishes, remove loader and boot the experience
     setTimeout(() => {
-      if (this.scrollHint) {
-        this.scrollHint.classList.add('visible');
-        // Hide on first scroll
-        const sc = document.getElementById('scroll-container');
-        if (sc) {
-          sc.addEventListener('scroll', () => {
-            this.scrollHint.classList.add('gone');
-          }, { once: true, passive: true });
-        }
-      }
-    }, 2000);
+      this.container.style.opacity = '0';
+      setTimeout(() => {
+        this.container.remove();
+        this.onComplete();
+      }, 1000); // fade out duration
+    }, delay + 500);
   }
 }

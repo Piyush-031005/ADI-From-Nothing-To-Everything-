@@ -9,15 +9,20 @@ export class AudioEngine {
     this.currentEra = -1;
     this._nodes     = [];
 
-    // Unlock on user gesture
-    document.getElementById('loader')?.addEventListener('click', () => {
-      this._init();
-    }, { once: true });
+    // Since AudioEngine is instantiated AFTER the user clicks the loader,
+    // we can initialize the AudioContext immediately!
+    this._init();
   }
 
   _init() {
     try {
       this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+      
+      // Ensure the context is running (sometimes browsers suspend it even after click)
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume();
+      }
+
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0.8; // BOOMING cinematic volume
       

@@ -3,11 +3,11 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="ĀDI — An interactive cinematic journey through 13.8 billion years of creation. From the singularity to the future, witness the birth of everything." />
-  <title>ĀDI — From Nothing. To Everything.</title>
+  <meta name="description" content="ĀDI — From Nothing. To Everything." />
+  <title>ĀDI — DIGITAL ECOLOGY</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Inter:wght@200;300;400&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Inter:wght@200;300;400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/src/adi-style.css">
 </head>
 <body>
@@ -20,50 +20,65 @@
   <!-- WebGL Canvas -->
   <canvas id="canvas"></canvas>
 
-  <!-- Loader -->
+  <!-- Cinematic Loader -->
   <div id="loader">
-    <div id="loader-singularity"></div>
-    <div id="loader-title">ĀDI</div>
-    <div id="loader-sub">From Nothing. To Everything.</div>
-    <div id="loader-hint">Click anywhere to begin</div>
+    <div id="loader-sequence">
+      <p>Nature is no longer only observed.</p>
+      <p>It is scanned, translated, indexed.</p>
+      <p>Every living surface can be mapped.</p>
+      <p>Initiating Genesis Sequence.</p>
+    </div>
+    <div id="loader-hint">Click to initialize system</div>
   </div>
 
-  <!-- UI Overlay -->
+  <!-- HUD Overlay (Digital Ecology Aesthetic) -->
   <div id="ui-overlay">
 
-    <!-- Brand -->
-    <div id="brand">
-      <div id="brand-name">ĀDI</div>
-      <div id="brand-tag">From Nothing. To Everything.</div>
+    <!-- Global Crosshairs & Scanning brackets -->
+    <div class="hud-corner top-left"></div>
+    <div class="hud-corner top-right"></div>
+    <div class="hud-corner bottom-left"></div>
+    <div class="hud-corner bottom-right"></div>
+    <div class="hud-crosshair"></div>
+
+    <!-- Tech Readouts -->
+    <div class="hud-text top-left-text">
+      SYSTEM.OP: <span class="highlight">ACTIVE</span><br>
+      INDEX_RATE: 0.94ms<br>
+      COORD: 45.12N, 90.3W
+    </div>
+    
+    <div class="hud-text top-right-text">
+      // DIGITAL ECOLOGY<br>
+      <span class="muted">Figma 2026 // A.I. DESIGN STUDIO</span>
     </div>
 
-    <!-- Year counter -->
-    <div id="year-counter">
-      <div id="year-value">13.8 BYA</div>
-    </div>
-
-    <!-- Era display -->
+    <!-- Era display (Center) -->
     <div id="era-display">
-      <div id="era-number">Era 00</div>
+      <div id="era-target-box">
+        <div class="target-corner tl"></div>
+        <div class="target-corner tr"></div>
+        <div class="target-corner bl"></div>
+        <div class="target-corner br"></div>
+        <div class="target-cross"></div>
+      </div>
+      <div id="era-number">RECORD: 00</div>
       <div id="era-title">THE VOID</div>
-      <div id="era-subtitle">Before time. Before space.</div>
+      <div id="era-subtitle">Null dataset. Awaiting singularity expansion.</div>
+      <div id="era-hexcode">#000000</div>
     </div>
 
-    <!-- Scroll hint -->
-    <div id="scroll-hint">
-      <div class="scroll-hint-text">Scroll to witness</div>
-      <div class="scroll-hint-arrow"></div>
+    <!-- Year counter / Timeline -->
+    <div id="year-counter">
+      <div class="scan-line"></div>
+      <div id="year-value">T-MINUS 13.8 BYA</div>
     </div>
-
-    <!-- Timeline -->
-    <div id="timeline">
-      <!-- JS generates dots + lines -->
-    </div>
+    <div id="timeline"></div>
 
     <!-- Final message -->
     <div id="final-message">
-      <div id="final-quote">"Evolution never ended.<br>You are standing on its latest chapter."</div>
-      <div id="final-sub">— ĀDI · From Nothing. To Everything.</div>
+      <div id="final-quote">"Seeing is no longer believing — it is processing."</div>
+      <div id="final-sub">SPECIMEN ASSIMILATED.</div>
     </div>
 
   </div>
