@@ -31,6 +31,11 @@ export class AudioEngine {
       
       this.masterGain.connect(this.compressor);
       this.compressor.connect(this.ctx.destination);
+      
+      // Start playing if an era was already requested
+      if (this.currentEra !== -1) {
+        this._playEra(this.currentEra);
+      }
     } catch(e) {
       console.warn('Audio context unavailable', e);
     }
