@@ -58,15 +58,14 @@ export class Era10_Future {
   _loadModels() {
     const loader = new GLTFLoader();
 
-    // 1. Cyberpunk Wheel Environment (Moved to the side)
+    // 1. Cyberpunk Wheel Environment (Massive scale)
     loader.load('/models/future/space_station_3.glb', (gltf) => {
       this.city = gltf.scene;
       this.group.add(this.city);
 
-      this._autoScale(this.city, 350, false); // Massive environment
-      // Move to the right side so it frames the screen perfectly
-      this.city.position.set(100, -50, -100); 
-      this.city.rotation.x = Math.PI / 8; // Tilt it slightly to look dramatic
+      this._autoScale(this.city, 800, false); // Insanely massive zoom
+      this.city.position.set(0, 50, -200); 
+      this.city.rotation.x = Math.PI / 8; 
       
       this._forceVisibility(this.city, 0x113344); // Cyberpunk blue glow
 
@@ -82,13 +81,30 @@ export class Era10_Future {
       this.car = gltf.scene;
       this.group.add(this.car);
       
-      this._autoScale(this.car, 12, false); 
+      this._autoScale(this.car, 20, false); 
       this.car.position.set(-20, 10, -20);
       
       this._forceVisibility(this.car, 0x332211); // Warm glow
 
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.car);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
+
+    // 3. Ground Cyberpunk City (Background context)
+    loader.load('/models/future/cyberpunk_city_-_1.glb', (gltf) => {
+      this.groundCity = gltf.scene;
+      this.group.add(this.groundCity);
+      
+      this._autoScale(this.groundCity, 1000, true); // Massive background city
+      this.groundCity.position.set(0, -300, -300); // Below and behind the wheel
+      
+      this._forceVisibility(this.groundCity, 0x001122); 
+
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.groundCity);
         mixer.clipAction(gltf.animations[0]).play();
         this.mixers.push(mixer);
       }
@@ -119,12 +135,12 @@ export class Era10_Future {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(-40, 20, 80),   
-      new THREE.Vector3(-20, 5, 30),  
-      new THREE.Vector3(10, 5, 0),    
-      new THREE.Vector3(20, 10, -30),  
+      new THREE.Vector3(-100, 50, 150),   // Start wide, seeing ground city below
+      new THREE.Vector3(0, 0, 50),        // Zooming towards the massive wheel
+      new THREE.Vector3(50, -20, 0),      // Flying under the wheel
+      new THREE.Vector3(0, 30, -50),      // Arriving inside the wheel hub
     ]);
-    return { curve, lookAt: new THREE.Vector3(100, -50, -100) }; // Look at the massive station on the side
+    return { curve, lookAt: new THREE.Vector3(0, 0, -200) }; // Look at the massive station core
   }
 
   show(duration = 1.0) {

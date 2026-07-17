@@ -53,7 +53,7 @@ export class Era3_Stars {
       colors[i*3]   = col.r;
       colors[i*3+1] = col.g;
       colors[i*3+2] = col.b;
-      sizes[i] = Math.random() * 0.8 + 0.2;
+      sizes[i] = Math.random() * 1.5 + 0.5; // Bigger, brighter stars
     }
 
     const geo = new THREE.BufferGeometry();
@@ -165,12 +165,12 @@ export class Era3_Stars {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0,  2, 15),
-      new THREE.Vector3(5,  1, 10),
-      new THREE.Vector3(3,  0, 5),
-      new THREE.Vector3(3,  0.5, 2),
+      new THREE.Vector3(0,  20, 150),  // Extreme farness
+      new THREE.Vector3(0,  10, 60),   // Zooming in
+      new THREE.Vector3(5,  2, 10),    // Entering a galaxy
+      new THREE.Vector3(3,  0.5, 2),   // Arriving at the star
     ]);
-    return { curve, lookAt: new THREE.Vector3(2, 0, -2) };
+    return { curve, lookAt: new THREE.Vector3(0, 0, 0) };
   }
 
   show(duration = 1.0) {

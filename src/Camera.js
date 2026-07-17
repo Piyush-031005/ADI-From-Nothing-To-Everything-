@@ -70,6 +70,7 @@ export class Camera {
     this.curve      = path.curve;
     this.lookAtPath = path.lookAt;
     this.curveTargetT = 0;
+    this.curveT = 0;
   }
 
   /** Called by ScrollController every frame */

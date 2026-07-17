@@ -46,11 +46,11 @@ export class Timeline {
   }
 
   setProgress(eraIndex, eraT) {
-    // Fill the line of the current era
+    // Fill the line of the current era vertically
     this.lines.forEach((fill, i) => {
-      if (i < eraIndex)       fill.style.width = '100%';
-      else if (i === eraIndex) fill.style.width = `${eraT * 100}%`;
-      else                    fill.style.width = '0%';
+      if (i < eraIndex)       fill.style.height = '100%';
+      else if (i === eraIndex) fill.style.height = `${eraT * 100}%`;
+      else                    fill.style.height = '0%';
     });
   }
 }
