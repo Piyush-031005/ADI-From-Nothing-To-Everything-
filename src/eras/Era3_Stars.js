@@ -31,29 +31,22 @@ export class Era3_Stars {
     ];
 
     for (let i = 0; i < count; i++) {
-      // Create multiple spiral galaxies
-      const galaxyIndex = Math.floor(Math.random() * 5);
-      const galaxyOffsets = [
-        [0, 0, 0], [20, 10, -30], [-15, -5, 20], [30, -15, 10], [-25, 20, -15]
-      ];
-      const offset = galaxyOffsets[galaxyIndex];
+      // Create a massive volumetric sphere of stars for an infinite feel
+      const radius = Math.cbrt(Math.random()) * 500; // CBRT ensures uniform distribution in volume
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
       
-      // Spiral math
-      const radius = Math.pow(Math.random(), 2.0) * 15; // denser in center
-      const spinAngle = radius * 0.5; // spiral twist
-      const branchAngle = (i % 3) * ((Math.PI * 2) / 3); // 3 arms
-      
-      const randomOffset = (Math.random() - 0.5) * 1.5;
-      
-      positions[i*3]   = offset[0] + Math.cos(spinAngle + branchAngle) * radius + randomOffset;
-      positions[i*3+1] = offset[1] + (Math.random() - 0.5) * (2.0 - radius * 0.1); // flatter disc
-      positions[i*3+2] = offset[2] + Math.sin(spinAngle + branchAngle) * radius + randomOffset;
+      positions[i*3]   = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i*3+2] = radius * Math.cos(phi);
 
       const col = palette[Math.floor(Math.random() * palette.length)];
       colors[i*3]   = col.r;
       colors[i*3+1] = col.g;
       colors[i*3+2] = col.b;
-      sizes[i] = Math.random() * 1.5 + 0.5; // Bigger, brighter stars
+      
+      // Some stars are huge (closer), most are small (distant)
+      sizes[i] = Math.random() > 0.9 ? (Math.random() * 3.0 + 1.0) : (Math.random() * 0.8 + 0.2); 
     }
 
     const geo = new THREE.BufferGeometry();

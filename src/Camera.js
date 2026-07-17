@@ -66,11 +66,17 @@ export class Camera {
    * Called by EraDirector per era.
    * path: { curve: CatmullRomCurve3, lookAt: CatmullRomCurve3 | THREE.Vector3 }
    */
-  setPath(path) {
+  setPath(path, isForward = true) {
     this.curve      = path.curve;
     this.lookAtPath = path.lookAt;
-    this.curveTargetT = 0;
-    this.curveT = 0;
+    
+    if (isForward) {
+      this.curveTargetT = 0;
+      this.curveT = 0;
+    } else {
+      this.curveTargetT = 1;
+      this.curveT = 1;
+    }
   }
 
   /** Called by ScrollController every frame */

@@ -51,7 +51,7 @@ export class Era8_Dinosaurs {
       this.trex.position.set(5, -15, 5); // Moved closer to center
       this.trex.rotation.y = -Math.PI / 4; 
       
-      this._forceVisibility(this.trex);
+      // Let PBR lights handle it naturally
 
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.trex);
@@ -68,7 +68,7 @@ export class Era8_Dinosaurs {
       this._autoScale(this.ptero, 12, false); 
       this.ptero.position.set(0, 15, -10);
       
-      this._forceVisibility(this.ptero);
+      // Let PBR lights handle it naturally
 
       if (gltf.animations.length > 0) {
         const mixer = new THREE.AnimationMixer(this.ptero);
@@ -88,27 +88,6 @@ export class Era8_Dinosaurs {
     const dirLight = new THREE.DirectionalLight(0xffaa55, 10.0);
     dirLight.position.set(-100, 200, 100);
     this.group.add(dirLight);
-  }
-
-  // Force materials to be bright and emissive to prevent pitch-black bug
-  _forceVisibility(model) {
-    model.traverse((child) => {
-      if (child.isMesh && child.material) {
-        // Backup original color if needed, but force it to be bright
-        child.material.envMapIntensity = 2.0;
-        child.material.depthWrite = true;
-        child.material.roughness = 0.8;
-        child.material.metalness = 0.1;
-        
-        // Add a strong ambient emissive glow so it's impossible to be dark
-        if (!child.material.emissive) {
-          child.material.emissive = new THREE.Color(0x333333);
-        } else {
-          child.material.emissive.add(new THREE.Color(0x222222));
-        }
-        child.material.needsUpdate = true;
-      }
-    });
   }
 
   _buildTerrain() {

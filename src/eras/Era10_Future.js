@@ -92,23 +92,6 @@ export class Era10_Future {
         this.mixers.push(mixer);
       }
     });
-
-    // 3. Ground Cyberpunk City (Background context)
-    loader.load('/models/future/cyberpunk_city_-_1.glb', (gltf) => {
-      this.groundCity = gltf.scene;
-      this.group.add(this.groundCity);
-      
-      this._autoScale(this.groundCity, 1000, true); // Massive background city
-      this.groundCity.position.set(0, -300, -300); // Below and behind the wheel
-      
-      this._forceVisibility(this.groundCity, 0x001122); 
-
-      if (gltf.animations.length > 0) {
-        const mixer = new THREE.AnimationMixer(this.groundCity);
-        mixer.clipAction(gltf.animations[0]).play();
-        this.mixers.push(mixer);
-      }
-    });
     
     // Cyberpunk Lighting Setup (Stronger for PBR Models)
     const ambient = new THREE.AmbientLight(0xffffff, 5.0); 
