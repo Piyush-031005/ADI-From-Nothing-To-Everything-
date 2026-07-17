@@ -109,12 +109,12 @@ export class Era9_Humans {
 
   getCameraPath() {
     const curve = new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0, -30, 20),
-      new THREE.Vector3(10, 0, 15),
-      new THREE.Vector3(-10, 20, 10),
-      new THREE.Vector3(0, 0, 0), 
+      new THREE.Vector3(0, -10, 40),
+      new THREE.Vector3(10, 5, 30),
+      new THREE.Vector3(-10, 10, 25),
+      new THREE.Vector3(0, 0, 15), // Stops safely outside the DNA helix
     ]);
-    return { curve, lookAt: new THREE.Vector3(0, 0, -20) };
+    return { curve, lookAt: new THREE.Vector3(0, 0, 0) }; // Look at the DNA itself
   }
 
   show(duration = 1.0) {

@@ -134,6 +134,7 @@ body, html {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 12px;
+  margin-right: -12px; /* Fixes off-center bug caused by letter spacing */
   margin-bottom: 20px;
   line-height: 1;
 }
@@ -143,6 +144,7 @@ body, html {
   font-weight: 300;
   text-transform: uppercase;
   letter-spacing: 5px;
+  margin-right: -5px; /* Fixes off-center bug */
   color: rgba(255, 255, 255, 0.7);
 }
 

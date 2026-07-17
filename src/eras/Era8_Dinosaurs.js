@@ -77,21 +77,48 @@ export class Era8_Dinosaurs {
       }
     });
     
-    // EXTREME LIGHTING
-    const ambient = new THREE.AmbientLight(0xffffff, 10.0); // Blast everything with white light
+    // 3. Triceratops
+    loader.load('/models/dinosaurs/triceratops_animated.glb', (gltf) => {
+      this.tri = gltf.scene;
+      this.group.add(this.tri);
+      this._autoScale(this.tri, 10, true);
+      this.tri.position.set(-20, -15, 10);
+      this.tri.rotation.y = Math.PI / 3;
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.tri);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
+
+    // 4. Velociraptor
+    loader.load('/models/dinosaurs/animated_jwr_velociraptor.glb', (gltf) => {
+      this.raptor = gltf.scene;
+      this.group.add(this.raptor);
+      this._autoScale(this.raptor, 6, true);
+      this.raptor.position.set(15, -15, 20);
+      this.raptor.rotation.y = -Math.PI / 1.5;
+      if (gltf.animations.length > 0) {
+        const mixer = new THREE.AnimationMixer(this.raptor);
+        mixer.clipAction(gltf.animations[0]).play();
+        this.mixers.push(mixer);
+      }
+    });
+
+    const ambient = new THREE.AmbientLight(0xffffff, 2.0);
     this.group.add(ambient);
     
-    const hemiLight = new THREE.HemisphereLight(0xffddaa, 0x444444, 5.0);
+    const hemiLight = new THREE.HemisphereLight(0xffddaa, 0x444444, 3.0);
     hemiLight.position.set(0, 200, 0);
     this.group.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xffaa55, 10.0);
+    const dirLight = new THREE.DirectionalLight(0xffaa55, 6.0);
     dirLight.position.set(-100, 200, 100);
     this.group.add(dirLight);
   }
 
   _buildTerrain() {
-    const geo = new THREE.PlaneGeometry(300, 300, 128, 128); // Reduced poly count to save lag
+    const geo = new THREE.PlaneGeometry(300, 300, 64, 64);
     geo.rotateX(-Math.PI * 0.5);
     
     this.terrainMat = new THREE.ShaderMaterial({
@@ -132,13 +159,13 @@ export class Era8_Dinosaurs {
 
         void main() {
           vec3 pos = position;
-          float h = snoise(pos.xz * 0.03) * 8.0 + snoise(pos.xz * 0.1) * 2.0;
+          float h = snoise(pos.xz * 0.03) * 6.0 + snoise(pos.xz * 0.1) * 1.5;
           
           float dist = length(pos.xz);
           float crater = smoothstep(50.0, 0.0, dist) * -20.0;
           float rim = smoothstep(70.0, 40.0, dist) * smoothstep(10.0, 40.0, dist) * 15.0;
           
-          pos.y = mix(h, h + crater + rim, uImpact);
+          pos.y = mix(h, h + crater + rim, uImpact) - 5.0; // Lowered mountains via -5.0
           vPos = pos;
           vHeight = pos.y;
           
@@ -152,7 +179,7 @@ export class Era8_Dinosaurs {
         varying float vHeight;
         
         void main() {
-          vec3 preImpact = vec3(0.02, 0.05, 0.01);
+          vec3 preImpact = vec3(0.1, 0.35, 0.1); // Lush green
           vec3 scorched = vec3(0.01, 0.01, 0.01); 
           vec3 magma = vec3(1.0, 0.3, 0.0);
           

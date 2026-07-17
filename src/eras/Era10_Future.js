@@ -92,6 +92,22 @@ export class Era10_Future {
         this.mixers.push(mixer);
       }
     });
+
+    // 3. Ground Cyberpunk City (Static Background to prevent lag)
+    loader.load('/models/future/cyberpunk_city_-_1.glb', (gltf) => {
+      this.groundCity = gltf.scene;
+      this.group.add(this.groundCity);
+      
+      this._autoScale(this.groundCity, 1000, true); 
+      this.groundCity.position.set(0, -300, -300); 
+      
+      this._forceVisibility(this.groundCity, 0x001122); 
+
+      // OPTIMIZATION: Do not load animations for the background city! 
+      // This prevents the severe CPU hang/lag.
+      this.groundCity.matrixAutoUpdate = false;
+      this.groundCity.updateMatrix();
+    });
     
     // Cyberpunk Lighting Setup (Stronger for PBR Models)
     const ambient = new THREE.AmbientLight(0xffffff, 5.0); 
