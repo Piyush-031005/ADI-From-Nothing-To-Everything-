@@ -1,4 +1,4 @@
-# ĀDI — From Nothing. To Everything.
+# ĀDI — "The beginning is the end"
 
 A cinematic, scroll-driven interactive journey through **13.8 billion years** of creation — built with Three.js, custom GLSL shaders, and GSAP ScrollTrigger.
 
